@@ -122,7 +122,7 @@ class DiscoveryService {
   /// Step 3: Discover calendar home set from principal
   Future<(Uri, String?)> _discoverCalendarHome(Uri principalUrl) async {
     final body = PropfindBuilder()
-        .addCaldavProperty('calendar-home-set')
+        .addCalDavProperty('calendar-home-set')
         .addDavProperty('displayname')
         .build();
 

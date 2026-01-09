@@ -11,7 +11,7 @@ class PropfindBuilder {
   }
 
   /// Add a CalDAV property
-  PropfindBuilder addCaldavProperty(String name) {
+  PropfindBuilder addCalDavProperty(String name) {
     _properties.add(_Property(name, XmlNamespaces.caldav, 'C'));
     return this;
   }
@@ -84,7 +84,7 @@ $props  </D:prop>
   /// Preset: calendar-home-set discovery
   static String calendarHomeSet() {
     return PropfindBuilder()
-        .addCaldavProperty('calendar-home-set')
+        .addCalDavProperty('calendar-home-set')
         .build();
   }
 
@@ -94,9 +94,9 @@ $props  </D:prop>
         .addDavProperty('resourcetype')
         .addDavProperty('displayname')
         .addDavProperty('geteuid')
-        .addCaldavProperty('calendar-description')
-        .addCaldavProperty('calendar-timezone')
-        .addCaldavProperty('supported-calendar-component-set')
+        .addCalDavProperty('calendar-description')
+        .addCalDavProperty('calendar-timezone')
+        .addCalDavProperty('supported-calendar-component-set')
         .addAppleProperty('calendar-color')
         .addCalendarServerProperty('getctag')
         .build();

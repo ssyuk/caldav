@@ -16,7 +16,7 @@ import 'webdav/propfind_builder.dart';
 ///
 /// Example usage:
 /// ```dart
-/// final client = CaldavClient(
+/// final client = CalDavClient(
 ///   baseUrl: 'https://caldav.example.com',
 ///   username: 'user@example.com',
 ///   password: 'password',
@@ -148,7 +148,7 @@ class CalDavClient {
   ///
   /// Creates client, verifies authentication, and discovers endpoints.
   /// Automatically initializes timezone database.
-  /// Throws [CaldavException] if authentication fails.
+  /// Throws [CalDavException] if authentication fails.
   static Future<CalDavClient> connect({
     required String baseUrl,
     required String username,
@@ -167,7 +167,7 @@ class CalDavClient {
     final authenticated = await client.verifyAuth();
     if (!authenticated) {
       client.close();
-      throw const CaldavException('Authentication failed', statusCode: 401);
+      throw const CalDavException('Authentication failed', statusCode: 401);
     }
 
     await client.discover();

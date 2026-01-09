@@ -37,12 +37,12 @@ class CalendarService {
           .map(_parseCalendar)
           .toList();
     } on DioException catch (e) {
-      throw CaldavException(
+      throw CalDavException(
         'Failed to list calendars: ${e.message}',
         statusCode: e.response?.statusCode,
       );
     } on Exception catch (e) {
-      throw CaldavException('Failed to parse calendar list: $e');
+      throw CalDavException('Failed to parse calendar list: $e');
     }
   }
 
@@ -69,7 +69,7 @@ class CalendarService {
       if (e.response?.statusCode == 404) {
         throw const NotFoundException('Calendar not found');
       }
-      throw CaldavException(
+      throw CalDavException(
         'Failed to get calendar: ${e.message}',
         statusCode: e.response?.statusCode,
       );
@@ -107,9 +107,9 @@ class CalendarService {
       );
     } on DioException catch (e) {
       if (e.response?.statusCode == 405) {
-        throw const CaldavException('Calendar already exists or creation not allowed');
+        throw const CalDavException('Calendar already exists or creation not allowed');
       }
-      throw CaldavException(
+      throw CalDavException(
         'Failed to create calendar: ${e.message}',
         statusCode: e.response?.statusCode,
       );
@@ -132,7 +132,7 @@ class CalendarService {
     try {
       await _client.proppatch(calendar.href.toString(), body: body);
     } on DioException catch (e) {
-      throw CaldavException(
+      throw CalDavException(
         'Failed to update calendar: ${e.message}',
         statusCode: e.response?.statusCode,
       );
@@ -147,7 +147,7 @@ class CalendarService {
       if (e.response?.statusCode == 404) {
         throw const NotFoundException('Calendar not found');
       }
-      throw CaldavException(
+      throw CalDavException(
         'Failed to delete calendar: ${e.message}',
         statusCode: e.response?.statusCode,
       );

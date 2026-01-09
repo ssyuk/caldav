@@ -53,7 +53,7 @@ void main() async {
         }
       }
     }
-  } on CaldavException catch (e) {
+  } on CalDavException catch (e) {
     print('CalDAV Error: ${e.message}');
   } finally {
     client?.close();

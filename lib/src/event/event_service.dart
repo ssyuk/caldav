@@ -79,7 +79,7 @@ class EventService {
 
       return [];
     } on DioException catch (e) {
-      throw CaldavException(
+      throw CalDavException(
         'Failed to list events: ${e.message}',
         statusCode: e.response?.statusCode,
       );
@@ -139,7 +139,7 @@ class EventService {
 
       return events;
     } on DioException catch (e) {
-      throw CaldavException(
+      throw CalDavException(
         'Failed to fetch events: ${e.message}',
         statusCode: e.response?.statusCode,
       );
@@ -162,7 +162,7 @@ class EventService {
       if (e.response?.statusCode == 404) {
         return null;
       }
-      throw CaldavException(
+      throw CalDavException(
         'Failed to get event: ${e.message}',
         statusCode: e.response?.statusCode,
       );
@@ -192,7 +192,7 @@ class EventService {
       if (e.response?.statusCode == 412) {
         throw const ConflictException('Event already exists');
       }
-      throw CaldavException(
+      throw CalDavException(
         'Failed to create event: ${e.message}',
         statusCode: e.response?.statusCode,
       );
@@ -204,7 +204,7 @@ class EventService {
   /// Uses ETag for optimistic locking if available
   Future<CalendarEvent> update(CalendarEvent event) async {
     if (event.href == null) {
-      throw const CaldavException('Event href is required for update');
+      throw const CalDavException('Event href is required for update');
     }
 
     try {
@@ -225,7 +225,7 @@ class EventService {
       if (e.response?.statusCode == 404) {
         throw const NotFoundException('Event not found');
       }
-      throw CaldavException(
+      throw CalDavException(
         'Failed to update event: ${e.message}',
         statusCode: e.response?.statusCode,
       );
@@ -235,7 +235,7 @@ class EventService {
   /// Delete an event
   Future<void> delete(CalendarEvent event) async {
     if (event.href == null) {
-      throw const CaldavException('Event href is required for delete');
+      throw const CalDavException('Event href is required for delete');
     }
 
     try {
@@ -252,7 +252,7 @@ class EventService {
         throw const ConflictException(
             'Event was modified by another client. Please refresh and try again.');
       }
-      throw CaldavException(
+      throw CalDavException(
         'Failed to delete event: ${e.message}',
         statusCode: e.response?.statusCode,
       );
@@ -311,7 +311,7 @@ class EventService {
 
       return events;
     } on DioException catch (e) {
-      throw CaldavException(
+      throw CalDavException(
         'Failed to get events: ${e.message}',
         statusCode: e.response?.statusCode,
       );
@@ -356,7 +356,7 @@ class EventService {
 
       return null;
     } on DioException catch (e) {
-      throw CaldavException(
+      throw CalDavException(
         'Failed to find event by UID: ${e.message}',
         statusCode: e.response?.statusCode,
       );

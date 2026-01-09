@@ -12,7 +12,7 @@
 /// import 'package:caldav/caldav.dart';
 ///
 /// void main() async {
-///   final client = await CaldavClient.connect(
+///   final client = await CalDavClient.connect(
 ///     baseUrl: 'https://caldav.example.com',
 ///     username: 'user@example.com',
 ///     password: 'password',
@@ -44,7 +44,7 @@ export 'src/event/event.dart' show CalendarEvent;
 // Exceptions
 export 'src/exceptions/caldav_exception.dart'
     show
-        CaldavException,
+        CalDavException,
         AuthenticationException,
         NotFoundException,
         ConflictException,
