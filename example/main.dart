@@ -43,7 +43,7 @@ void main() async {
       for (final event in events) {
         print('  ${_formatDate(event.start)} - ${event.summary}');
         if (event.location != null) {
-          print('    Location: ${event.location}');
+          print('    id: ${event.uid}');
         }
       }
     }

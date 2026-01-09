@@ -94,6 +94,7 @@ $props  </D:prop>
         .addDavProperty('resourcetype')
         .addDavProperty('displayname')
         .addDavProperty('geteuid')
+        .addDavProperty('current-user-privilege-set')
         .addCalDavProperty('calendar-description')
         .addCalDavProperty('calendar-timezone')
         .addCalDavProperty('supported-calendar-component-set')

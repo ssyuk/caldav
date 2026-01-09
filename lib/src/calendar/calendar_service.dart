@@ -195,6 +195,9 @@ class CalendarService {
             .toList() ??
         ['VEVENT'];
 
+    // Parse privileges to determine read-only status
+    final isReadOnly = _parseIsReadOnly(response);
+
     return Calendar(
       uid: uid ?? response.href,
       href: _calendarHome.resolve(response.href),
@@ -204,7 +207,48 @@ class CalendarService {
       timezone: timezone,
       ctag: ctag,
       supportedComponents: supportedComponents,
+      isReadOnly: isReadOnly,
     );
+  }
+
+  /// Parse current-user-privilege-set to determine if calendar is read-only
+  ///
+  /// A calendar is read-only if it lacks any write privileges:
+  /// - write
+  /// - write-content
+  /// - bind (add resources)
+  /// - unbind (remove resources)
+  bool _parseIsReadOnly(DavResponse response) {
+    final privilegeSetElement = response.getPropertyElement(
+      'current-user-privilege-set',
+      namespace: XmlNamespaces.dav,
+    );
+
+    // If no privilege-set returned, assume writable (server may not support ACL)
+    if (privilegeSetElement == null) {
+      return false;
+    }
+
+    // Write privileges that indicate the calendar is writable
+    const writePrivileges = {'write', 'write-content', 'bind', 'unbind', 'all'};
+
+    // Look for any write privilege in the privilege set
+    for (final privilegeElement in privilegeSetElement.childElements) {
+      if (privilegeElement.localName != 'privilege' ||
+          privilegeElement.namespaceUri != XmlNamespaces.dav) {
+        continue;
+      }
+
+      for (final privilege in privilegeElement.childElements) {
+        if (privilege.namespaceUri == XmlNamespaces.dav &&
+            writePrivileges.contains(privilege.localName)) {
+          return false; // Has write privilege, not read-only
+        }
+      }
+    }
+
+    // No write privileges found, calendar is read-only
+    return true;
   }
 
   String _sanitizeName(String name) {

@@ -24,6 +24,9 @@ class Calendar {
   /// Collection tag for sync (changes when calendar content changes)
   final String? ctag;
 
+  /// Whether the calendar is read-only (no write privileges)
+  final bool isReadOnly;
+
   const Calendar({
     required this.uid,
     required this.href,
@@ -33,6 +36,7 @@ class Calendar {
     this.supportedComponents = const ['VEVENT'],
     this.timezone,
     this.ctag,
+    this.isReadOnly = false,
   });
 
   /// Check if calendar supports events
@@ -54,6 +58,7 @@ class Calendar {
     List<String>? supportedComponents,
     String? timezone,
     String? ctag,
+    bool? isReadOnly,
   }) {
     return Calendar(
       uid: uid ?? this.uid,
@@ -64,6 +69,7 @@ class Calendar {
       supportedComponents: supportedComponents ?? this.supportedComponents,
       timezone: timezone ?? this.timezone,
       ctag: ctag ?? this.ctag,
+      isReadOnly: isReadOnly ?? this.isReadOnly,
     );
   }
 

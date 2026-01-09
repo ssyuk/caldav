@@ -10,11 +10,13 @@ class ICalendarParser {
   /// [calendarId] Calendar ID that this event belongs to
   /// [href] Resource URL
   /// [etag] Entity tag
+  /// [isReadOnly] Whether the event is read-only (inherited from calendar)
   static CalendarEvent? parseEvent(
     String icalendar, {
     required String calendarId,
     Uri? href,
     String? etag,
+    bool isReadOnly = false,
   }) {
     final lines = _unfoldLines(icalendar);
     final eventLines = _extractComponent(lines, 'VEVENT');
@@ -63,6 +65,7 @@ class ICalendarParser {
           : null,
       isAllDay: isAllDay,
       rawIcalendar: icalendar,
+      isReadOnly: isReadOnly,
     );
   }
 
@@ -71,6 +74,7 @@ class ICalendarParser {
     String icalendar, {
     required String calendarId,
     Uri? baseHref,
+    bool isReadOnly = false,
   }) {
     final lines = _unfoldLines(icalendar);
     final events = <CalendarEvent>[];
@@ -87,6 +91,7 @@ class ICalendarParser {
         final event = parseEvent(
           'BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\n${eventLines.join('\n')}\nEND:VEVENT\nEND:VCALENDAR',
           calendarId: calendarId,
+          isReadOnly: isReadOnly,
         );
         if (event != null) events.add(event);
       } else if (inEvent) {

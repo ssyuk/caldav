@@ -33,6 +33,9 @@ class CalendarEvent {
   /// Raw iCalendar data (preserved from server)
   final String? rawIcalendar;
 
+  /// Whether this event is read-only (inherited from calendar)
+  final bool isReadOnly;
+
   const CalendarEvent({
     required this.uid,
     required this.calendarId,
@@ -45,6 +48,7 @@ class CalendarEvent {
     this.location,
     this.isAllDay = false,
     this.rawIcalendar,
+    this.isReadOnly = false,
   });
 
   /// Event duration
@@ -66,6 +70,7 @@ class CalendarEvent {
     String? location,
     bool? isAllDay,
     String? rawIcalendar,
+    bool? isReadOnly,
   }) {
     return CalendarEvent(
       uid: uid ?? this.uid,
@@ -79,6 +84,7 @@ class CalendarEvent {
       location: location ?? this.location,
       isAllDay: isAllDay ?? this.isAllDay,
       rawIcalendar: rawIcalendar ?? this.rawIcalendar,
+      isReadOnly: isReadOnly ?? this.isReadOnly,
     );
   }
 

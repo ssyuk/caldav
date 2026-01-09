@@ -61,6 +61,7 @@ class EventService {
             calendarId: calendar.uid,
             href: calendar.href.resolve(davResponse.href),
             etag: etag,
+            isReadOnly: calendar.isReadOnly,
           );
           if (event != null) events.add(event);
         } else if (davResponse.href.endsWith('.ics')) {
@@ -133,6 +134,7 @@ class EventService {
           calendarId: calendar.uid,
           href: calendar.href.resolve(davResponse.href),
           etag: etag,
+          isReadOnly: calendar.isReadOnly,
         );
 
         if (event != null) events.add(event);
@@ -283,6 +285,7 @@ class EventService {
           calendarId: calendar.uid,
           href: calendar.href.resolve(davResponse.href),
           etag: etag,
+          isReadOnly: calendar.isReadOnly,
         );
 
         if (event != null) events.add(event);
@@ -330,6 +333,7 @@ class EventService {
             calendarId: calendar.uid,
             href: calendar.href.resolve(davResponse.href),
             etag: etag,
+            isReadOnly: calendar.isReadOnly,
           );
         }
       }
