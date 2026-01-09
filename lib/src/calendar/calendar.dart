@@ -1,5 +1,8 @@
 /// Represents a CalDAV calendar collection
 class Calendar {
+  /// Unique identifier (DAV:geteuid)
+  final String? id;
+
   /// Calendar resource URL
   final Uri href;
 
@@ -22,6 +25,7 @@ class Calendar {
   final String? ctag;
 
   const Calendar({
+    this.id,
     required this.href,
     required this.displayName,
     this.description,
@@ -42,6 +46,7 @@ class Calendar {
 
   /// Create a copy with updated fields
   Calendar copyWith({
+    String? id,
     Uri? href,
     String? displayName,
     String? description,
@@ -51,6 +56,7 @@ class Calendar {
     String? ctag,
   }) {
     return Calendar(
+      id: id ?? this.id,
       href: href ?? this.href,
       displayName: displayName ?? this.displayName,
       description: description ?? this.description,

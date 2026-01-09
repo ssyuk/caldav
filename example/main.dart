@@ -10,7 +10,7 @@ void main() async {
 
   try {
     // Connect (auto auth + discovery)
-    print('Connecting to CalDAV Calendar...');
+    print('Connecting to Naver Calendar...');
     client = await CaldavClient.connect(
       baseUrl: 'https://...',
       username: '...',

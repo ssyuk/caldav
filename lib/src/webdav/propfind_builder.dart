@@ -93,6 +93,7 @@ $props  </D:prop>
     return PropfindBuilder()
         .addDavProperty('resourcetype')
         .addDavProperty('displayname')
+        .addDavProperty('geteuid')
         .addCaldavProperty('calendar-description')
         .addCaldavProperty('calendar-timezone')
         .addCaldavProperty('supported-calendar-component-set')

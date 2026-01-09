@@ -155,6 +155,11 @@ class CalendarService {
   }
 
   Calendar _parseCalendar(DavResponse response) {
+    final id = response.getProperty(
+      'geteuid',
+      namespace: XmlNamespaces.dav,
+    );
+
     final displayName = response.getProperty(
           'displayname',
           namespace: XmlNamespaces.dav,
@@ -197,6 +202,7 @@ class CalendarService {
         ['VEVENT'];
 
     return Calendar(
+      id: id,
       href: _calendarHome.resolve(response.href),
       displayName: displayName,
       description: description,
