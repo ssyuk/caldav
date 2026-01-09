@@ -58,6 +58,7 @@ class EventService {
           );
           final event = ICalendarParser.parseEvent(
             calendarData,
+            calendarId: calendar.uid,
             href: calendar.href.resolve(davResponse.href),
             etag: etag,
           );
@@ -129,6 +130,7 @@ class EventService {
 
         final event = ICalendarParser.parseEvent(
           calendarData,
+          calendarId: calendar.uid,
           href: calendar.href.resolve(davResponse.href),
           etag: etag,
         );
@@ -140,29 +142,6 @@ class EventService {
     } on DioException catch (e) {
       throw CalDavException(
         'Failed to fetch events: ${e.message}',
-        statusCode: e.response?.statusCode,
-      );
-    }
-  }
-
-  /// Get a specific event by URL
-  Future<CalendarEvent?> get(Uri eventUrl) async {
-    try {
-      final response = await _client.get(eventUrl.toString());
-
-      final etag = response.headers.value('etag');
-
-      return ICalendarParser.parseEvent(
-        response.data ?? '',
-        href: eventUrl,
-        etag: etag,
-      );
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 404) {
-        return null;
-      }
-      throw CalDavException(
-        'Failed to get event: ${e.message}',
         statusCode: e.response?.statusCode,
       );
     }
@@ -301,6 +280,7 @@ class EventService {
 
         final event = ICalendarParser.parseEvent(
           calendarData,
+          calendarId: calendar.uid,
           href: calendar.href.resolve(davResponse.href),
           etag: etag,
         );
@@ -347,6 +327,7 @@ class EventService {
           );
           return ICalendarParser.parseEvent(
             calendarData,
+            calendarId: calendar.uid,
             href: calendar.href.resolve(davResponse.href),
             etag: etag,
           );

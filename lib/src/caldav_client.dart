@@ -302,12 +302,6 @@ class CalDavClient {
     return _eventService!.list(calendar, start: start, end: end);
   }
 
-  /// Get a specific event by URL
-  Future<CalendarEvent?> getEvent(Uri eventUrl) async {
-    await _ensureDiscovered();
-    return _eventService!.get(eventUrl);
-  }
-
   /// Create a new event
   ///
   /// Returns the created event with href and etag set

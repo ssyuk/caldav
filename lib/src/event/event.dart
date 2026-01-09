@@ -4,7 +4,7 @@ class CalendarEvent {
   final String uid;
 
   /// Calendar ID that this event belongs to
-  final String? calendarId;
+  final String calendarId;
 
   /// Resource URL (set after creation)
   final Uri? href;
@@ -35,7 +35,7 @@ class CalendarEvent {
 
   const CalendarEvent({
     required this.uid,
-    this.calendarId,
+    required this.calendarId,
     this.href,
     this.etag,
     required this.start,

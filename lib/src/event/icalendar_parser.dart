@@ -7,10 +7,12 @@ class ICalendarParser {
   /// Parse iCalendar string to CalendarEvent
   ///
   /// [icalendar] Raw iCalendar string
+  /// [calendarId] Calendar ID that this event belongs to
   /// [href] Resource URL
   /// [etag] Entity tag
   static CalendarEvent? parseEvent(
     String icalendar, {
+    required String calendarId,
     Uri? href,
     String? etag,
   }) {
@@ -47,6 +49,7 @@ class ICalendarParser {
 
     return CalendarEvent(
       uid: uid,
+      calendarId: calendarId,
       href: href,
       etag: etag,
       start: dtstart,
@@ -66,6 +69,7 @@ class ICalendarParser {
   /// Parse multiple events from iCalendar
   static List<CalendarEvent> parseEvents(
     String icalendar, {
+    required String calendarId,
     Uri? baseHref,
   }) {
     final lines = _unfoldLines(icalendar);
@@ -82,6 +86,7 @@ class ICalendarParser {
         inEvent = false;
         final event = parseEvent(
           'BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\n${eventLines.join('\n')}\nEND:VEVENT\nEND:VCALENDAR',
+          calendarId: calendarId,
         );
         if (event != null) events.add(event);
       } else if (inEvent) {
