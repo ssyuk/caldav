@@ -17,7 +17,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  caldav: ^1.3.0
+  caldav: ^1.2.2+2
 ```
 
 ## Quick Start
