@@ -11,7 +11,7 @@ dependencies:
   path: ^1.9.0
   dio: ^5.9.0
   xml: ^6.6.1
-  timezone: ^0.9.0
+  timezone: ^0.9.4
 
 dev_dependencies:
   lints: ^6.0.0
