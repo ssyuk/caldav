@@ -1,7 +1,7 @@
 /// Represents a CalDAV calendar collection
 class Calendar {
   /// Unique identifier (DAV:geteuid)
-  final String? uid;
+  final String uid;
 
   /// Calendar resource URL
   final Uri href;
@@ -25,7 +25,7 @@ class Calendar {
   final String? ctag;
 
   const Calendar({
-    this.uid,
+    required this.uid,
     required this.href,
     required this.displayName,
     this.description,

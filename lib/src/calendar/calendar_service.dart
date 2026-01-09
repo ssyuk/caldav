@@ -97,14 +97,8 @@ class CalendarService {
     try {
       await _client.mkcalendar(calendarPath.toString(), body: body);
 
-      return Calendar(
-        href: calendarPath,
-        displayName: name,
-        description: description,
-        color: color,
-        timezone: timezone,
-        supportedComponents: supportedComponents,
-      );
+      // Fetch the created calendar to get the server-assigned uid
+      return await get(calendarPath);
     } on DioException catch (e) {
       if (e.response?.statusCode == 405) {
         throw const CalDavException('Calendar already exists or creation not allowed');
@@ -155,7 +149,7 @@ class CalendarService {
   }
 
   Calendar _parseCalendar(DavResponse response) {
-    final id = response.getProperty(
+    final uid = response.getProperty(
       'geteuid',
       namespace: XmlNamespaces.dav,
     );
@@ -202,7 +196,7 @@ class CalendarService {
         ['VEVENT'];
 
     return Calendar(
-      uid: id,
+      uid: uid ?? response.href,
       href: _calendarHome.resolve(response.href),
       displayName: displayName,
       description: description,
