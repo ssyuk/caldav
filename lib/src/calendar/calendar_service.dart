@@ -202,7 +202,7 @@ class CalendarService {
         ['VEVENT'];
 
     return Calendar(
-      id: id,
+      uid: id,
       href: _calendarHome.resolve(response.href),
       displayName: displayName,
       description: description,

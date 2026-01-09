@@ -6,12 +6,12 @@ void main() async {
   // Initialize timezone database
   initializeTimeZones();
 
-  CaldavClient? client;
+  CalDavClient? client;
 
   try {
     // Connect (auto auth + discovery)
     print('Connecting to Naver Calendar...');
-    client = await CaldavClient.connect(
+    client = await CalDavClient.connect(
       baseUrl: 'https://...',
       username: '...',
       password: '...',

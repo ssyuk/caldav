@@ -30,7 +30,7 @@ import 'webdav/propfind_builder.dart';
 ///
 /// client.close();
 /// ```
-class CaldavClient {
+class CalDavClient {
   final Dio _dio;
   final DioWebDavClient _webdavClient;
   final DiscoveryService _discoveryService;
@@ -40,7 +40,7 @@ class CaldavClient {
   CalendarService? _calendarService;
   EventService? _eventService;
 
-  CaldavClient._({
+  CalDavClient._({
     required Dio dio,
     required DioWebDavClient webdavClient,
     required DiscoveryService discoveryService,
@@ -57,7 +57,7 @@ class CaldavClient {
   /// [password] Password for authentication
   /// [connectTimeout] Connection timeout (default: 30 seconds)
   /// [receiveTimeout] Receive timeout (default: 30 seconds)
-  factory CaldavClient({
+  factory CalDavClient({
     required String baseUrl,
     required String username,
     required String password,
@@ -81,7 +81,7 @@ class CaldavClient {
     final webdavClient = DioWebDavClient(dio);
     final discoveryService = DiscoveryService(webdavClient, dio);
 
-    return CaldavClient._(
+    return CalDavClient._(
       dio: dio,
       webdavClient: webdavClient,
       discoveryService: discoveryService,
@@ -93,7 +93,7 @@ class CaldavClient {
   ///
   /// [baseUrl] CalDAV server base URL
   /// [token] Bearer token for authentication
-  factory CaldavClient.withToken({
+  factory CalDavClient.withToken({
     required String baseUrl,
     required String token,
     Duration connectTimeout = const Duration(seconds: 30),
@@ -113,7 +113,7 @@ class CaldavClient {
     final webdavClient = DioWebDavClient(dio);
     final discoveryService = DiscoveryService(webdavClient, dio);
 
-    return CaldavClient._(
+    return CalDavClient._(
       dio: dio,
       webdavClient: webdavClient,
       discoveryService: discoveryService,
@@ -124,7 +124,7 @@ class CaldavClient {
   /// Create a CalDAV client with custom Dio instance
   ///
   /// Use this for advanced configuration or custom authentication
-  factory CaldavClient.withDio({
+  factory CalDavClient.withDio({
     required String baseUrl,
     required Dio dio,
   }) {
@@ -132,7 +132,7 @@ class CaldavClient {
     final webdavClient = DioWebDavClient(dio);
     final discoveryService = DiscoveryService(webdavClient, dio);
 
-    return CaldavClient._(
+    return CalDavClient._(
       dio: dio,
       webdavClient: webdavClient,
       discoveryService: discoveryService,
@@ -149,14 +149,14 @@ class CaldavClient {
   /// Creates client, verifies authentication, and discovers endpoints.
   /// Automatically initializes timezone database.
   /// Throws [CaldavException] if authentication fails.
-  static Future<CaldavClient> connect({
+  static Future<CalDavClient> connect({
     required String baseUrl,
     required String username,
     required String password,
     Duration connectTimeout = const Duration(seconds: 30),
     Duration receiveTimeout = const Duration(seconds: 30),
   }) async {
-    final client = CaldavClient(
+    final client = CalDavClient(
       baseUrl: baseUrl,
       username: username,
       password: password,
@@ -345,6 +345,25 @@ class CaldavClient {
   ) async {
     await _ensureDiscovered();
     return _eventService!.multiGet(calendar, eventUrls);
+  }
+
+  /// Find an event by UID across all calendars
+  ///
+  /// Uses server-side filtering via calendar-query for efficiency.
+  /// Searches through all calendars to find an event with the matching UID.
+  /// Returns null if no event is found.
+  Future<CalendarEvent?> getEventByUid(String uid) async {
+    await _ensureDiscovered();
+    final calendars = await getCalendars();
+
+    for (final calendar in calendars) {
+      final event = await _eventService!.findByUid(calendar, uid);
+      if (event != null) {
+        return event.copyWith(calendarId: calendar.uid);
+      }
+    }
+
+    return null;
   }
 
   // ============================================================

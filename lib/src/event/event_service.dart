@@ -318,6 +318,76 @@ class EventService {
     }
   }
 
+  /// Find an event by UID in a specific calendar
+  ///
+  /// Uses server-side filtering via calendar-query for efficiency.
+  /// Returns null if no event is found.
+  Future<CalendarEvent?> findByUid(Calendar calendar, String uid) async {
+    final body = _buildUidQueryBody(uid);
+
+    try {
+      final response = await _client.report(
+        calendar.href.toString(),
+        body: body,
+        depth: 1,
+      );
+
+      final multiStatus = MultiStatus.fromXml(response.data ?? '');
+      if (multiStatus.responses.isEmpty) return null;
+
+      for (final davResponse in multiStatus.responses) {
+        final calendarData = davResponse.getProperty(
+          'calendar-data',
+          namespace: XmlNamespaces.caldav,
+        );
+
+        if (calendarData != null && calendarData.isNotEmpty) {
+          final etag = davResponse.getProperty(
+            'getetag',
+            namespace: XmlNamespaces.dav,
+          );
+          return ICalendarParser.parseEvent(
+            calendarData,
+            href: calendar.href.resolve(davResponse.href),
+            etag: etag,
+          );
+        }
+      }
+
+      return null;
+    } on DioException catch (e) {
+      throw CaldavException(
+        'Failed to find event by UID: ${e.message}',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  String _buildUidQueryBody(String uid) {
+    // Escape special XML characters in UID
+    final escapedUid = uid
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+
+    return '''<?xml version="1.0" encoding="utf-8"?>
+<C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:prop>
+    <D:getetag/>
+    <C:calendar-data/>
+  </D:prop>
+  <C:filter>
+    <C:comp-filter name="VCALENDAR">
+      <C:comp-filter name="VEVENT">
+        <C:prop-filter name="UID">
+          <C:text-match collation="i;octet">$escapedUid</C:text-match>
+        </C:prop-filter>
+      </C:comp-filter>
+    </C:comp-filter>
+  </C:filter>
+</C:calendar-query>''';
+  }
+
   String _buildCalendarQueryBody({
     tz.TZDateTime? start,
     tz.TZDateTime? end,

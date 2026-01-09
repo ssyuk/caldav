@@ -5,6 +5,9 @@ class CalendarEvent {
   /// Unique identifier for the event
   final String uid;
 
+  /// Calendar ID that this event belongs to
+  final String? calendarId;
+
   /// Resource URL (set after creation)
   final Uri? href;
 
@@ -34,6 +37,7 @@ class CalendarEvent {
 
   const CalendarEvent({
     required this.uid,
+    this.calendarId,
     this.href,
     this.etag,
     required this.start,
@@ -57,6 +61,7 @@ class CalendarEvent {
   /// Create a copy with updated fields
   CalendarEvent copyWith({
     String? uid,
+    String? calendarId,
     Uri? href,
     String? etag,
     tz.TZDateTime? start,
@@ -69,6 +74,7 @@ class CalendarEvent {
   }) {
     return CalendarEvent(
       uid: uid ?? this.uid,
+      calendarId: calendarId ?? this.calendarId,
       href: href ?? this.href,
       etag: etag ?? this.etag,
       start: start ?? this.start,
