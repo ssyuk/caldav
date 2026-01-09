@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:timezone/timezone.dart' as tz;
 
 import '../calendar/calendar.dart';
 import '../client/dio_webdav_client.dart';
@@ -22,12 +21,12 @@ class EventService {
   /// URLs with calendar-multiget to fetch actual event data.
   ///
   /// [calendar] Target calendar
-  /// [start] Filter start date (optional)
-  /// [end] Filter end date (optional)
+  /// [start] Filter start date (optional, UTC)
+  /// [end] Filter end date (optional, UTC)
   Future<List<CalendarEvent>> list(
     Calendar calendar, {
-    tz.TZDateTime? start,
-    tz.TZDateTime? end,
+    DateTime? start,
+    DateTime? end,
   }) async {
     final body = _buildCalendarQueryBody(start: start, end: end);
 
@@ -389,8 +388,8 @@ class EventService {
   }
 
   String _buildCalendarQueryBody({
-    tz.TZDateTime? start,
-    tz.TZDateTime? end,
+    DateTime? start,
+    DateTime? end,
   }) {
     final timeRange = (start != null && end != null)
         ? '<C:time-range start="${_formatUtc(start)}" end="${_formatUtc(end)}"/>'
@@ -412,7 +411,7 @@ class EventService {
 </C:calendar-query>''';
   }
 
-  String _formatUtc(tz.TZDateTime dt) {
+  String _formatUtc(DateTime dt) {
     final utc = dt.toUtc();
     return '${utc.year.toString().padLeft(4, '0')}'
         '${utc.month.toString().padLeft(2, '0')}'

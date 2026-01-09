@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:timezone/timezone.dart' as tz;
 
 import 'calendar/calendar.dart';
 import 'calendar/calendar_service.dart';
@@ -147,7 +146,6 @@ class CalDavClient {
   /// Create and connect a CalDAV client (recommended)
   ///
   /// Creates client, verifies authentication, and discovers endpoints.
-  /// Automatically initializes timezone database.
   /// Throws [CalDavException] if authentication fails.
   static Future<CalDavClient> connect({
     required String baseUrl,
@@ -293,12 +291,12 @@ class CalDavClient {
   /// Get events from a calendar
   ///
   /// [calendar] Target calendar
-  /// [start] Optional start date filter
-  /// [end] Optional end date filter
+  /// [start] Optional start date filter (UTC)
+  /// [end] Optional end date filter (UTC)
   Future<List<CalendarEvent>> getEvents(
     Calendar calendar, {
-    tz.TZDateTime? start,
-    tz.TZDateTime? end,
+    DateTime? start,
+    DateTime? end,
   }) async {
     await _ensureDiscovered();
     return _eventService!.list(calendar, start: start, end: end);

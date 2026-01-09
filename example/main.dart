@@ -1,16 +1,11 @@
 import 'package:caldav/caldav.dart';
-import 'package:timezone/data/latest.dart';
-import 'package:timezone/timezone.dart';
 
 void main() async {
-  // Initialize timezone database
-  initializeTimeZones();
-
   CalDavClient? client;
 
   try {
     // Connect (auto auth + discovery)
-    print('Connecting to Naver Calendar...');
+    print('Connecting to CalDAV server...');
     client = await CalDavClient.connect(
       baseUrl: 'https://...',
       username: '...',
@@ -22,13 +17,12 @@ void main() async {
     final calendars = await client.getCalendars();
     print('Found ${calendars.length} calendar(s):');
     for (final cal in calendars) {
-      print('  - ${cal.displayName}');
+      print('  - ${cal.displayName} (uid: ${cal.uid})');
     }
 
     // Query events for January 2026
-    final location = getLocation('Asia/Seoul');
-    final start = TZDateTime(location, 2026, 1, 1);
-    final end = TZDateTime(location, 2026, 2, 1);
+    final start = DateTime.utc(2026, 1, 1);
+    final end = DateTime.utc(2026, 2, 1);
 
     print('\n${'=' * 40}');
     print('Events for January 2026');
@@ -53,6 +47,18 @@ void main() async {
         }
       }
     }
+
+    // Example: Find event by UID
+    print('\n${'=' * 40}');
+    print('Find event by UID example');
+    print('=' * 40);
+
+    final event = await client.getEventByUid('example-event-uid');
+    if (event != null) {
+      print('Found: ${event.summary} in calendar ${event.calendarId}');
+    } else {
+      print('Event not found');
+    }
   } on CalDavException catch (e) {
     print('CalDAV Error: ${e.message}');
   } finally {
@@ -60,7 +66,7 @@ void main() async {
   }
 }
 
-String _formatDate(TZDateTime dt) {
+String _formatDate(DateTime dt) {
   final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   final weekday = weekdays[dt.weekday - 1];
 

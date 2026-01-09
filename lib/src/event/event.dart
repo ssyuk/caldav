@@ -1,5 +1,3 @@
-import 'package:timezone/timezone.dart' as tz;
-
 /// Represents a calendar event (VEVENT)
 class CalendarEvent {
   /// Unique identifier for the event
@@ -14,11 +12,11 @@ class CalendarEvent {
   /// Entity tag for concurrency control
   final String? etag;
 
-  /// Event start time
-  final tz.TZDateTime start;
+  /// Event start time (UTC)
+  final DateTime start;
 
-  /// Event end time
-  final tz.TZDateTime? end;
+  /// Event end time (UTC)
+  final DateTime? end;
 
   /// Event title/summary
   final String summary;
@@ -49,9 +47,6 @@ class CalendarEvent {
     this.rawIcalendar,
   });
 
-  /// Get timezone ID (IANA format)
-  String get timezoneId => start.location.name;
-
   /// Event duration
   Duration? get duration {
     if (end == null) return null;
@@ -64,8 +59,8 @@ class CalendarEvent {
     String? calendarId,
     Uri? href,
     String? etag,
-    tz.TZDateTime? start,
-    tz.TZDateTime? end,
+    DateTime? start,
+    DateTime? end,
     String? summary,
     String? description,
     String? location,
@@ -94,31 +89,19 @@ class CalendarEvent {
     buffer.writeln('VERSION:2.0');
     buffer.writeln('PRODID:-//dart-caldav-client//EN');
 
-    // Add VTIMEZONE if not UTC
-    if (!start.isUtc && start.location != tz.UTC) {
-      buffer.write(_buildVTimezone(start.location));
-    }
-
     buffer.writeln('BEGIN:VEVENT');
     buffer.writeln('UID:$uid');
-    buffer.writeln('DTSTAMP:${_formatDateTimeUtc(tz.TZDateTime.now(tz.UTC))}');
+    buffer.writeln('DTSTAMP:${_formatDateTimeUtc(DateTime.now().toUtc())}');
 
     if (isAllDay) {
       buffer.writeln('DTSTART;VALUE=DATE:${_formatDate(start)}');
       if (end != null) {
         buffer.writeln('DTEND;VALUE=DATE:${_formatDate(end!)}');
       }
-    } else if (start.isUtc || start.location == tz.UTC) {
-      buffer.writeln('DTSTART:${_formatDateTimeUtc(start)}');
-      if (end != null) {
-        buffer.writeln('DTEND:${_formatDateTimeUtc(end!)}');
-      }
     } else {
-      buffer.writeln(
-          'DTSTART;TZID=${start.location.name}:${_formatDateTimeLocal(start)}');
+      buffer.writeln('DTSTART:${_formatDateTimeUtc(start.toUtc())}');
       if (end != null) {
-        buffer.writeln(
-            'DTEND;TZID=${end!.location.name}:${_formatDateTimeLocal(end!)}');
+        buffer.writeln('DTEND:${_formatDateTimeUtc(end!.toUtc())}');
       }
     }
 
@@ -139,28 +122,17 @@ class CalendarEvent {
   }
 
   /// Format: 20240115T100000Z (UTC)
-  String _formatDateTimeUtc(tz.TZDateTime dt) {
-    final utc = dt.toUtc();
-    return '${utc.year.toString().padLeft(4, '0')}'
-        '${utc.month.toString().padLeft(2, '0')}'
-        '${utc.day.toString().padLeft(2, '0')}T'
-        '${utc.hour.toString().padLeft(2, '0')}'
-        '${utc.minute.toString().padLeft(2, '0')}'
-        '${utc.second.toString().padLeft(2, '0')}Z';
-  }
-
-  /// Format: 20240115T100000 (local time)
-  String _formatDateTimeLocal(tz.TZDateTime dt) {
+  String _formatDateTimeUtc(DateTime dt) {
     return '${dt.year.toString().padLeft(4, '0')}'
         '${dt.month.toString().padLeft(2, '0')}'
         '${dt.day.toString().padLeft(2, '0')}T'
         '${dt.hour.toString().padLeft(2, '0')}'
         '${dt.minute.toString().padLeft(2, '0')}'
-        '${dt.second.toString().padLeft(2, '0')}';
+        '${dt.second.toString().padLeft(2, '0')}Z';
   }
 
   /// Format: 20240115 (date only)
-  String _formatDate(tz.TZDateTime dt) {
+  String _formatDate(DateTime dt) {
     return '${dt.year.toString().padLeft(4, '0')}'
         '${dt.month.toString().padLeft(2, '0')}'
         '${dt.day.toString().padLeft(2, '0')}';
@@ -173,21 +145,6 @@ class CalendarEvent {
         .replaceAll('\n', '\\n')
         .replaceAll(',', '\\,')
         .replaceAll(';', '\\;');
-  }
-
-  /// Build simplified VTIMEZONE component
-  String _buildVTimezone(tz.Location location) {
-    // Note: Full VTIMEZONE requires DST transition rules
-    // This is a simplified version
-    return '''BEGIN:VTIMEZONE
-TZID:${location.name}
-BEGIN:STANDARD
-DTSTART:19700101T000000
-TZOFFSETFROM:+0000
-TZOFFSETTO:+0000
-END:STANDARD
-END:VTIMEZONE
-''';
   }
 
   @override

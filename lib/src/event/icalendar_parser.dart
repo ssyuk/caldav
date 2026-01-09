@@ -1,5 +1,3 @@
-import 'package:timezone/timezone.dart' as tz;
-
 import 'event.dart';
 
 /// Parser for iCalendar (RFC 5545) data
@@ -11,12 +9,10 @@ class ICalendarParser {
   /// [icalendar] Raw iCalendar string
   /// [href] Resource URL
   /// [etag] Entity tag
-  /// [defaultLocation] Default timezone if not specified
   static CalendarEvent? parseEvent(
     String icalendar, {
     Uri? href,
     String? etag,
-    tz.Location? defaultLocation,
   }) {
     final lines = _unfoldLines(icalendar);
     final eventLines = _extractComponent(lines, 'VEVENT');
@@ -24,7 +20,6 @@ class ICalendarParser {
     if (eventLines.isEmpty) return null;
 
     final properties = _parseProperties(eventLines);
-    final location = defaultLocation ?? tz.local;
 
     // Parse required fields
     final uid = properties['UID'];
@@ -36,8 +31,6 @@ class ICalendarParser {
     final dtstart = _parseDateTime(
       properties['DTSTART'],
       properties['DTSTART;VALUE'],
-      _extractTzid(properties, 'DTSTART'),
-      location,
     );
 
     if (dtstart == null) return null;
@@ -46,8 +39,6 @@ class ICalendarParser {
     final dtend = _parseDateTime(
       properties['DTEND'],
       properties['DTEND;VALUE'],
-      _extractTzid(properties, 'DTEND'),
-      location,
     );
 
     // Check if all-day event
@@ -76,7 +67,6 @@ class ICalendarParser {
   static List<CalendarEvent> parseEvents(
     String icalendar, {
     Uri? baseHref,
-    tz.Location? defaultLocation,
   }) {
     final lines = _unfoldLines(icalendar);
     final events = <CalendarEvent>[];
@@ -92,7 +82,6 @@ class ICalendarParser {
         inEvent = false;
         final event = parseEvent(
           'BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\n${eventLines.join('\n')}\nEND:VEVENT\nEND:VCALENDAR',
-          defaultLocation: defaultLocation,
         );
         if (event != null) events.add(event);
       } else if (inEvent) {
@@ -172,26 +161,17 @@ class ICalendarParser {
     return properties;
   }
 
-  /// Extract TZID parameter for a property
-  static String? _extractTzid(Map<String, String> properties, String propName) {
-    return properties['$propName;TZID'];
-  }
-
-  /// Parse datetime value
-  static tz.TZDateTime? _parseDateTime(
+  /// Parse datetime value to UTC DateTime
+  static DateTime? _parseDateTime(
     String? value,
     String? valueType,
-    String? tzid,
-    tz.Location defaultLocation,
   ) {
     if (value == null || value.isEmpty) return null;
 
     try {
       // UTC format: 20240115T100000Z
       if (value.endsWith('Z')) {
-        final dt = _parseIsoBasic(value.substring(0, value.length - 1));
-        return tz.TZDateTime.utc(
-            dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second);
+        return _parseIsoBasic(value.substring(0, value.length - 1), isUtc: true);
       }
 
       // Date only (all-day): 20240115
@@ -200,38 +180,39 @@ class ICalendarParser {
         final year = int.parse(cleanValue.substring(0, 4));
         final month = int.parse(cleanValue.substring(4, 6));
         final day = int.parse(cleanValue.substring(6, 8));
-
-        final location = tzid != null ? tz.getLocation(tzid) : defaultLocation;
-        return tz.TZDateTime(location, year, month, day);
+        return DateTime.utc(year, month, day);
       }
 
-      // Local time with timezone
-      final location = tzid != null ? tz.getLocation(tzid) : defaultLocation;
-      final dt = _parseIsoBasic(value);
-      return tz.TZDateTime(
-          location, dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second);
+      // Local time - convert to UTC
+      return _parseIsoBasic(value, isUtc: false)?.toUtc();
     } catch (e) {
       return null;
     }
   }
 
   /// Parse ISO basic format: 20240115T100000
-  static DateTime _parseIsoBasic(String value) {
-    final year = int.parse(value.substring(0, 4));
-    final month = int.parse(value.substring(4, 6));
-    final day = int.parse(value.substring(6, 8));
+  static DateTime? _parseIsoBasic(String value, {bool isUtc = false}) {
+    try {
+      final year = int.parse(value.substring(0, 4));
+      final month = int.parse(value.substring(4, 6));
+      final day = int.parse(value.substring(6, 8));
 
-    if (value.length > 8 && value.contains('T')) {
-      final timeStart = value.indexOf('T') + 1;
-      final hour = int.parse(value.substring(timeStart, timeStart + 2));
-      final minute = int.parse(value.substring(timeStart + 2, timeStart + 4));
-      final second = value.length >= timeStart + 6
-          ? int.parse(value.substring(timeStart + 4, timeStart + 6))
-          : 0;
-      return DateTime(year, month, day, hour, minute, second);
+      if (value.length > 8 && value.contains('T')) {
+        final timeStart = value.indexOf('T') + 1;
+        final hour = int.parse(value.substring(timeStart, timeStart + 2));
+        final minute = int.parse(value.substring(timeStart + 2, timeStart + 4));
+        final second = value.length >= timeStart + 6
+            ? int.parse(value.substring(timeStart + 4, timeStart + 6))
+            : 0;
+        return isUtc
+            ? DateTime.utc(year, month, day, hour, minute, second)
+            : DateTime(year, month, day, hour, minute, second);
+      }
+
+      return isUtc ? DateTime.utc(year, month, day) : DateTime(year, month, day);
+    } catch (e) {
+      return null;
     }
-
-    return DateTime(year, month, day);
   }
 
   /// Unescape iCalendar text
