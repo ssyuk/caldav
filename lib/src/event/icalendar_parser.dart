@@ -49,6 +49,13 @@ class ICalendarParser {
     final isAllDay = properties['DTSTART;VALUE'] == 'DATE' ||
         (properties['DTSTART']?.length == 8);
 
+    // Parse recurrence fields
+    final rrule = properties['RRULE'];
+    final recurrenceId = properties['RECURRENCE-ID'];
+
+    // Parse EXDATE (may have multiple values separated by comma, or multiple EXDATE lines)
+    final exdate = _parseExdate(eventLines);
+
     return CalendarEvent(
       uid: uid,
       calendarId: calendarId,
@@ -66,6 +73,9 @@ class ICalendarParser {
       isAllDay: isAllDay,
       rawIcalendar: icalendar,
       isReadOnly: isReadOnly,
+      rrule: rrule,
+      recurrenceId: recurrenceId,
+      exdate: exdate,
     );
   }
 
@@ -232,5 +242,27 @@ class ICalendarParser {
         .replaceAll('\\,', ',')
         .replaceAll('\\;', ';')
         .replaceAll('\\\\', '\\');
+  }
+
+  /// Parse EXDATE values from event lines
+  /// EXDATE can appear multiple times and can have comma-separated values
+  /// Example: EXDATE:20240115T100000Z,20240116T100000Z
+  /// Example: EXDATE;VALUE=DATE:20240115,20240116
+  static List<String>? _parseExdate(List<String> lines) {
+    final exdates = <String>[];
+
+    for (final line in lines) {
+      if (line.startsWith('EXDATE')) {
+        final colonIndex = line.indexOf(':');
+        if (colonIndex > 0) {
+          final value = line.substring(colonIndex + 1).trim();
+          // Split by comma for multiple dates in one EXDATE line
+          final dates = value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty);
+          exdates.addAll(dates);
+        }
+      }
+    }
+
+    return exdates.isEmpty ? null : exdates;
   }
 }

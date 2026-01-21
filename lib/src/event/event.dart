@@ -36,6 +36,18 @@ class CalendarEvent {
   /// Whether this event is read-only (inherited from calendar)
   final bool isReadOnly;
 
+  /// Recurrence rule (RFC 5545 RRULE)
+  /// Example: "FREQ=DAILY;INTERVAL=1;COUNT=10"
+  final String? rrule;
+
+  /// Recurrence ID for modified instances (RFC 5545 RECURRENCE-ID)
+  /// Contains the original occurrence date of a modified recurring instance
+  final String? recurrenceId;
+
+  /// Exception dates (RFC 5545 EXDATE)
+  /// List of dates excluded from the recurrence set
+  final List<String>? exdate;
+
   const CalendarEvent({
     required this.uid,
     required this.calendarId,
@@ -49,6 +61,9 @@ class CalendarEvent {
     this.isAllDay = false,
     this.rawIcalendar,
     this.isReadOnly = false,
+    this.rrule,
+    this.recurrenceId,
+    this.exdate,
   });
 
   /// Event duration
@@ -71,6 +86,9 @@ class CalendarEvent {
     bool? isAllDay,
     String? rawIcalendar,
     bool? isReadOnly,
+    String? rrule,
+    String? recurrenceId,
+    List<String>? exdate,
   }) {
     return CalendarEvent(
       uid: uid ?? this.uid,
@@ -85,6 +103,9 @@ class CalendarEvent {
       isAllDay: isAllDay ?? this.isAllDay,
       rawIcalendar: rawIcalendar ?? this.rawIcalendar,
       isReadOnly: isReadOnly ?? this.isReadOnly,
+      rrule: rrule ?? this.rrule,
+      recurrenceId: recurrenceId ?? this.recurrenceId,
+      exdate: exdate ?? this.exdate,
     );
   }
 
@@ -119,6 +140,18 @@ class CalendarEvent {
 
     if (location != null && location!.isNotEmpty) {
       buffer.writeln('LOCATION:${_escapeIcalText(location!)}');
+    }
+
+    if (rrule != null && rrule!.isNotEmpty) {
+      buffer.writeln('RRULE:$rrule');
+    }
+
+    if (recurrenceId != null && recurrenceId!.isNotEmpty) {
+      buffer.writeln('RECURRENCE-ID:$recurrenceId');
+    }
+
+    if (exdate != null && exdate!.isNotEmpty) {
+      buffer.writeln('EXDATE:${exdate!.join(',')}');
     }
 
     buffer.writeln('END:VEVENT');

@@ -17,7 +17,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  caldav: ^1.2.2+2
+  caldav: ^1.3.0
 ```
 
 ## Quick Start
@@ -197,6 +197,31 @@ try {
 await client.deleteEvent(event);
 ```
 
+### Recurring Events
+
+The library parses recurring event fields from iCalendar data:
+
+```dart
+final events = await client.getEvents(calendar, start: start, end: end);
+for (final event in events) {
+  if (event.rrule != null) {
+    print('Recurring event: ${event.summary}');
+    print('  Rule: ${event.rrule}');  // e.g., "FREQ=DAILY;COUNT=10"
+
+    if (event.exdate != null) {
+      print('  Excluded dates: ${event.exdate}');
+    }
+  }
+
+  if (event.recurrenceId != null) {
+    print('Modified instance of recurring event');
+    print('  Original date: ${event.recurrenceId}');
+  }
+}
+```
+
+**Note:** The library provides raw RRULE strings. For recurrence expansion, use a dedicated library like `rrule`.
+
 ## Data Models
 
 ### Calendar
@@ -227,6 +252,9 @@ await client.deleteEvent(event);
 | `location` | `String?` | Event location |
 | `isAllDay` | `bool` | All-day event flag |
 | `rawIcalendar` | `String?` | Raw iCalendar data |
+| `rrule` | `String?` | RFC 5545 recurrence rule (e.g., "FREQ=DAILY;COUNT=10") |
+| `recurrenceId` | `String?` | RECURRENCE-ID for modified instances |
+| `exdate` | `List<String>?` | Exception dates excluded from recurrence |
 
 ## Error Handling
 

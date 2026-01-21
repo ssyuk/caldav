@@ -1,3 +1,11 @@
+## 1.3.0
+- Added recurrence support to `CalendarEvent`:
+  - `rrule`: RFC 5545 RRULE for recurring events (e.g., "FREQ=DAILY;INTERVAL=1;COUNT=10")
+  - `recurrenceId`: RECURRENCE-ID for modified instances of recurring events
+  - `exdate`: Exception dates excluded from the recurrence set
+- Updated `ICalendarParser` to extract RRULE, RECURRENCE-ID, and EXDATE from iCalendar data
+- Updated `CalendarEvent.toIcalendar()` to serialize recurrence fields
+
 ## 1.2.2+3
 - Added missing changelog
 
