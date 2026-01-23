@@ -1,3 +1,13 @@
+## 1.4.0
+- Added HTTPS enforcement by default with `allowInsecure` parameter for development
+- Added `getEventsFromCalendars()` for parallel event fetching across multiple calendars
+- Added `getAllEvents()` convenience method for fetching all events in parallel
+- Optimized `getEventByUid()` to search all calendars in parallel
+- Added `WebDavClient` abstract interface for better testability
+- Created `ICalendarUtils` utility class to consolidate shared formatting functions
+- Refactored `EventService` with helper methods to reduce code duplication
+- Added comprehensive unit tests (27 test cases)
+
 ## 1.3.0
 - Added recurrence support to `CalendarEvent`:
   - `rrule`: RFC 5545 RRULE for recurring events (e.g., "FREQ=DAILY;INTERVAL=1;COUNT=10")

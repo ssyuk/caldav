@@ -17,7 +17,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  caldav: ^1.3.0
+  caldav: ^1.4.0
 ```
 
 ## Quick Start
@@ -61,6 +61,22 @@ void main() async {
   }
 }
 ```
+
+## Security
+
+By default, only HTTPS connections are allowed to protect credentials. For local development or testing, you can disable this check:
+
+```dart
+// For development only - NOT recommended for production!
+final client = await CalDavClient.connect(
+  baseUrl: 'http://localhost:8080',
+  username: 'test',
+  password: 'test',
+  allowInsecure: true,  // Allows HTTP connections
+);
+```
+
+⚠️ **Warning**: Using HTTP transmits credentials in plain text and is vulnerable to man-in-the-middle attacks. Only use `allowInsecure: true` for local development.
 
 ## Authentication Methods
 
@@ -125,6 +141,19 @@ await client.updateCalendar(
 await client.deleteCalendar(calendar);
 ```
 
+### Check Read-Only Status
+
+```dart
+final calendars = await client.getCalendars();
+for (final cal in calendars) {
+  if (cal.isReadOnly) {
+    print('${cal.displayName} is read-only (shared or subscribed)');
+  } else {
+    print('${cal.displayName} is writable');
+  }
+}
+```
+
 ## Event Operations
 
 ### Query Events
@@ -139,6 +168,32 @@ final events = await client.getEvents(
   start: start,
   end: end,
 );
+```
+
+### Get All Events (Parallel Fetch)
+
+```dart
+// Efficiently fetch all events from all calendars in parallel
+final allEvents = await client.getAllEvents(
+  start: DateTime.utc(2024, 1, 1),
+  end: DateTime.utc(2024, 12, 31),
+);
+```
+
+### Get Events from Multiple Calendars
+
+```dart
+// Fetch events from specific calendars in parallel
+final eventsMap = await client.getEventsFromCalendars(
+  [calendar1, calendar2, calendar3],
+  start: start,
+  end: end,
+);
+
+// eventsMap is Map<String, List<CalendarEvent>> keyed by calendar UID
+for (final entry in eventsMap.entries) {
+  print('Calendar ${entry.key}: ${entry.value.length} events');
+}
 ```
 
 ### Find Event by UID
@@ -236,6 +291,7 @@ for (final event in events) {
 | `timezone` | `String?` | Default timezone (IANA format) |
 | `ctag` | `String?` | Collection tag for sync |
 | `supportedComponents` | `List<String>` | Supported components (VEVENT, VTODO, etc.) |
+| `isReadOnly` | `bool` | Read-only status based on ACL privileges |
 
 ### CalendarEvent
 
@@ -252,6 +308,7 @@ for (final event in events) {
 | `location` | `String?` | Event location |
 | `isAllDay` | `bool` | All-day event flag |
 | `rawIcalendar` | `String?` | Raw iCalendar data |
+| `isReadOnly` | `bool` | Read-only status (inherited from calendar) |
 | `rrule` | `String?` | RFC 5545 recurrence rule (e.g., "FREQ=DAILY;COUNT=10") |
 | `recurrenceId` | `String?` | RECURRENCE-ID for modified instances |
 | `exdate` | `List<String>?` | Exception dates excluded from recurrence |

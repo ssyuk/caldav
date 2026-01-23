@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../client/dio_webdav_client.dart';
 import '../exceptions/caldav_exception.dart';
+import '../utils/icalendar_utils.dart';
 import '../webdav/multistatus.dart';
 import '../webdav/propfind_builder.dart';
 import '../webdav/xml_namespaces.dart';
@@ -268,26 +269,28 @@ class CalendarService {
     List<String>? supportedComponents,
   }) {
     final props = StringBuffer();
-    props.writeln('        <D:displayname>$name</D:displayname>');
+    props.writeln(
+        '        <D:displayname>${ICalendarUtils.escapeXml(name)}</D:displayname>');
 
     if (description != null) {
       props.writeln(
-          '        <C:calendar-description>$description</C:calendar-description>');
+          '        <C:calendar-description>${ICalendarUtils.escapeXml(description)}</C:calendar-description>');
     }
 
     if (color != null) {
-      props.writeln('        <A:calendar-color>$color</A:calendar-color>');
+      props.writeln(
+          '        <A:calendar-color>${ICalendarUtils.escapeXml(color)}</A:calendar-color>');
     }
 
     if (timezone != null) {
       props.writeln(
-          '        <C:calendar-timezone>$timezone</C:calendar-timezone>');
+          '        <C:calendar-timezone>${ICalendarUtils.escapeXml(timezone)}</C:calendar-timezone>');
     }
 
     if (supportedComponents != null && supportedComponents.isNotEmpty) {
       props.writeln('        <C:supported-calendar-component-set>');
       for (final comp in supportedComponents) {
-        props.writeln('          <C:comp name="$comp"/>');
+        props.writeln('          <C:comp name="${ICalendarUtils.escapeXml(comp)}"/>');
       }
       props.writeln('        </C:supported-calendar-component-set>');
     }
@@ -309,16 +312,18 @@ $props    </D:prop>
     final props = StringBuffer();
 
     if (displayName != null) {
-      props.writeln('        <D:displayname>$displayName</D:displayname>');
+      props.writeln(
+          '        <D:displayname>${ICalendarUtils.escapeXml(displayName)}</D:displayname>');
     }
 
     if (description != null) {
       props.writeln(
-          '        <C:calendar-description>$description</C:calendar-description>');
+          '        <C:calendar-description>${ICalendarUtils.escapeXml(description)}</C:calendar-description>');
     }
 
     if (color != null) {
-      props.writeln('        <A:calendar-color>$color</A:calendar-color>');
+      props.writeln(
+          '        <A:calendar-color>${ICalendarUtils.escapeXml(color)}</A:calendar-color>');
     }
 
     return '''<?xml version="1.0" encoding="utf-8"?>

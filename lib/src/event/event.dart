@@ -1,3 +1,5 @@
+import '../utils/icalendar_utils.dart';
+
 /// Represents a calendar event (VEVENT)
 class CalendarEvent {
   /// Unique identifier for the event
@@ -118,28 +120,28 @@ class CalendarEvent {
 
     buffer.writeln('BEGIN:VEVENT');
     buffer.writeln('UID:$uid');
-    buffer.writeln('DTSTAMP:${_formatDateTimeUtc(DateTime.now().toUtc())}');
+    buffer.writeln('DTSTAMP:${ICalendarUtils.formatUtc(DateTime.now().toUtc())}');
 
     if (isAllDay) {
-      buffer.writeln('DTSTART;VALUE=DATE:${_formatDate(start)}');
+      buffer.writeln('DTSTART;VALUE=DATE:${ICalendarUtils.formatDate(start)}');
       if (end != null) {
-        buffer.writeln('DTEND;VALUE=DATE:${_formatDate(end!)}');
+        buffer.writeln('DTEND;VALUE=DATE:${ICalendarUtils.formatDate(end!)}');
       }
     } else {
-      buffer.writeln('DTSTART:${_formatDateTimeUtc(start.toUtc())}');
+      buffer.writeln('DTSTART:${ICalendarUtils.formatUtc(start.toUtc())}');
       if (end != null) {
-        buffer.writeln('DTEND:${_formatDateTimeUtc(end!.toUtc())}');
+        buffer.writeln('DTEND:${ICalendarUtils.formatUtc(end!.toUtc())}');
       }
     }
 
-    buffer.writeln('SUMMARY:${_escapeIcalText(summary)}');
+    buffer.writeln('SUMMARY:${ICalendarUtils.escapeText(summary)}');
 
     if (description != null && description!.isNotEmpty) {
-      buffer.writeln('DESCRIPTION:${_escapeIcalText(description!)}');
+      buffer.writeln('DESCRIPTION:${ICalendarUtils.escapeText(description!)}');
     }
 
     if (location != null && location!.isNotEmpty) {
-      buffer.writeln('LOCATION:${_escapeIcalText(location!)}');
+      buffer.writeln('LOCATION:${ICalendarUtils.escapeText(location!)}');
     }
 
     if (rrule != null && rrule!.isNotEmpty) {
@@ -158,32 +160,6 @@ class CalendarEvent {
     buffer.writeln('END:VCALENDAR');
 
     return buffer.toString();
-  }
-
-  /// Format: 20240115T100000Z (UTC)
-  String _formatDateTimeUtc(DateTime dt) {
-    return '${dt.year.toString().padLeft(4, '0')}'
-        '${dt.month.toString().padLeft(2, '0')}'
-        '${dt.day.toString().padLeft(2, '0')}T'
-        '${dt.hour.toString().padLeft(2, '0')}'
-        '${dt.minute.toString().padLeft(2, '0')}'
-        '${dt.second.toString().padLeft(2, '0')}Z';
-  }
-
-  /// Format: 20240115 (date only)
-  String _formatDate(DateTime dt) {
-    return '${dt.year.toString().padLeft(4, '0')}'
-        '${dt.month.toString().padLeft(2, '0')}'
-        '${dt.day.toString().padLeft(2, '0')}';
-  }
-
-  /// Escape special characters in iCalendar text
-  String _escapeIcalText(String text) {
-    return text
-        .replaceAll('\\', '\\\\')
-        .replaceAll('\n', '\\n')
-        .replaceAll(',', '\\,')
-        .replaceAll(';', '\\;');
   }
 
   @override

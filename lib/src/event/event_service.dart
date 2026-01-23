@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../calendar/calendar.dart';
 import '../client/dio_webdav_client.dart';
 import '../exceptions/caldav_exception.dart';
+import '../utils/icalendar_utils.dart';
 import '../webdav/multistatus.dart';
 import '../webdav/xml_namespaces.dart';
 import 'event.dart';
@@ -13,6 +14,45 @@ class EventService {
   final DioWebDavClient _client;
 
   EventService(this._client);
+
+  /// Parse a single DavResponse into CalendarEvent
+  CalendarEvent? _parseEventFromResponse(
+    DavResponse davResponse,
+    Calendar calendar,
+  ) {
+    final calendarData = davResponse.getProperty(
+      'calendar-data',
+      namespace: XmlNamespaces.caldav,
+    );
+
+    if (calendarData == null || calendarData.isEmpty) return null;
+
+    final etag = davResponse.getProperty(
+      'getetag',
+      namespace: XmlNamespaces.dav,
+    );
+
+    return ICalendarParser.parseEvent(
+      calendarData,
+      calendarId: calendar.uid,
+      href: calendar.href.resolve(davResponse.href),
+      etag: etag,
+      isReadOnly: calendar.isReadOnly,
+    );
+  }
+
+  /// Parse multiple DavResponses into CalendarEvents
+  List<CalendarEvent> _parseEventsFromResponses(
+    List<DavResponse> responses,
+    Calendar calendar,
+  ) {
+    final events = <CalendarEvent>[];
+    for (final davResponse in responses) {
+      final event = _parseEventFromResponse(davResponse, calendar);
+      if (event != null) events.add(event);
+    }
+    return events;
+  }
 
   /// List events in a calendar
   ///
@@ -40,40 +80,17 @@ class EventService {
       final multiStatus = MultiStatus.fromXml(response.data ?? '');
       if (multiStatus.responses.isEmpty) return [];
 
-      final events = <CalendarEvent>[];
-      final urlsWithoutData = <String>[];
-
-      // Parse responses - collect events or URLs
-      for (final davResponse in multiStatus.responses) {
-        final calendarData = davResponse.getProperty(
-          'calendar-data',
-          namespace: XmlNamespaces.caldav,
-        );
-
-        if (calendarData != null && calendarData.isNotEmpty) {
-          // Server returned calendar-data (standard behavior)
-          final etag = davResponse.getProperty(
-            'getetag',
-            namespace: XmlNamespaces.dav,
-          );
-          final event = ICalendarParser.parseEvent(
-            calendarData,
-            calendarId: calendar.uid,
-            href: calendar.href.resolve(davResponse.href),
-            etag: etag,
-            isReadOnly: calendar.isReadOnly,
-          );
-          if (event != null) events.add(event);
-        } else if (davResponse.href.endsWith('.ics')) {
-          // No calendar-data but has URL (Naver-style)
-          urlsWithoutData.add(davResponse.href);
-        }
-      }
-
-      // If we got events directly, return them
+      // Try to parse events directly from response
+      final events = _parseEventsFromResponses(multiStatus.responses, calendar);
       if (events.isNotEmpty) return events;
 
-      // No calendar-data returned - fetch via multiget (URLs are already filtered!)
+      // Collect URLs without calendar-data (Naver-style servers)
+      final urlsWithoutData = multiStatus.responses
+          .where((r) => r.href.endsWith('.ics'))
+          .map((r) => r.href)
+          .toList();
+
+      // Fetch via multiget if we have URLs but no calendar-data
       if (urlsWithoutData.isNotEmpty) {
         return _fetchWithMultiget(calendar, urlsWithoutData);
       }
@@ -94,8 +111,10 @@ class EventService {
   ) async {
     if (eventPaths.isEmpty) return [];
 
-    // Build href elements for multiget
-    final hrefs = eventPaths.map((p) => '<D:href>$p</D:href>').join('\n');
+    // Build href elements for multiget (escape XML special characters)
+    final hrefs = eventPaths
+        .map((p) => '<D:href>${ICalendarUtils.escapeXml(p)}</D:href>')
+        .join('\n');
 
     final body = '''<?xml version="1.0" encoding="utf-8"?>
 <C:calendar-multiget xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
@@ -114,33 +133,7 @@ class EventService {
       );
 
       final multiStatus = MultiStatus.fromXml(response.data ?? '');
-      final events = <CalendarEvent>[];
-
-      for (final davResponse in multiStatus.responses) {
-        final calendarData = davResponse.getProperty(
-          'calendar-data',
-          namespace: XmlNamespaces.caldav,
-        );
-
-        if (calendarData == null || calendarData.isEmpty) continue;
-
-        final etag = davResponse.getProperty(
-          'getetag',
-          namespace: XmlNamespaces.dav,
-        );
-
-        final event = ICalendarParser.parseEvent(
-          calendarData,
-          calendarId: calendar.uid,
-          href: calendar.href.resolve(davResponse.href),
-          etag: etag,
-          isReadOnly: calendar.isReadOnly,
-        );
-
-        if (event != null) events.add(event);
-      }
-
-      return events;
+      return _parseEventsFromResponses(multiStatus.responses, calendar);
     } on DioException catch (e) {
       throw CalDavException(
         'Failed to fetch events: ${e.message}',
@@ -246,7 +239,9 @@ class EventService {
   ) async {
     if (eventUrls.isEmpty) return [];
 
-    final hrefs = eventUrls.map((u) => '<D:href>${u.path}</D:href>').join('\n');
+    final hrefs = eventUrls
+        .map((u) => '<D:href>${ICalendarUtils.escapeXml(u.path)}</D:href>')
+        .join('\n');
 
     final body = '''<?xml version="1.0" encoding="utf-8"?>
 <C:calendar-multiget xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
@@ -265,33 +260,7 @@ class EventService {
       );
 
       final multiStatus = MultiStatus.fromXml(response.data ?? '');
-      final events = <CalendarEvent>[];
-
-      for (final davResponse in multiStatus.responses) {
-        final calendarData = davResponse.getProperty(
-          'calendar-data',
-          namespace: XmlNamespaces.caldav,
-        );
-
-        if (calendarData == null || calendarData.isEmpty) continue;
-
-        final etag = davResponse.getProperty(
-          'getetag',
-          namespace: XmlNamespaces.dav,
-        );
-
-        final event = ICalendarParser.parseEvent(
-          calendarData,
-          calendarId: calendar.uid,
-          href: calendar.href.resolve(davResponse.href),
-          etag: etag,
-          isReadOnly: calendar.isReadOnly,
-        );
-
-        if (event != null) events.add(event);
-      }
-
-      return events;
+      return _parseEventsFromResponses(multiStatus.responses, calendar);
     } on DioException catch (e) {
       throw CalDavException(
         'Failed to get events: ${e.message}',
@@ -303,6 +272,7 @@ class EventService {
   /// Find an event by UID in a specific calendar
   ///
   /// Uses server-side filtering via calendar-query for efficiency.
+  /// If server doesn't return calendar-data (like Naver), uses multiget fallback.
   /// Returns null if no event is found.
   Future<CalendarEvent?> findByUid(Calendar calendar, String uid) async {
     final body = _buildUidQueryBody(uid);
@@ -317,25 +287,21 @@ class EventService {
       final multiStatus = MultiStatus.fromXml(response.data ?? '');
       if (multiStatus.responses.isEmpty) return null;
 
+      // Try to parse event directly
       for (final davResponse in multiStatus.responses) {
-        final calendarData = davResponse.getProperty(
-          'calendar-data',
-          namespace: XmlNamespaces.caldav,
-        );
+        final event = _parseEventFromResponse(davResponse, calendar);
+        if (event != null) return event;
+      }
 
-        if (calendarData != null && calendarData.isNotEmpty) {
-          final etag = davResponse.getProperty(
-            'getetag',
-            namespace: XmlNamespaces.dav,
-          );
-          return ICalendarParser.parseEvent(
-            calendarData,
-            calendarId: calendar.uid,
-            href: calendar.href.resolve(davResponse.href),
-            etag: etag,
-            isReadOnly: calendar.isReadOnly,
-          );
-        }
+      // Fallback: get URL and fetch via multiget (Naver-style)
+      final urlWithoutData = multiStatus.responses
+          .where((r) => r.href.endsWith('.ics'))
+          .map((r) => r.href)
+          .firstOrNull;
+
+      if (urlWithoutData != null) {
+        final events = await _fetchWithMultiget(calendar, [urlWithoutData]);
+        return events.isNotEmpty ? events.first : null;
       }
 
       return null;
@@ -348,11 +314,7 @@ class EventService {
   }
 
   String _buildUidQueryBody(String uid) {
-    // Escape special XML characters in UID
-    final escapedUid = uid
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;');
+    final escapedUid = ICalendarUtils.escapeXml(uid);
 
     return '''<?xml version="1.0" encoding="utf-8"?>
 <C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
@@ -377,7 +339,7 @@ class EventService {
     DateTime? end,
   }) {
     final timeRange = (start != null && end != null)
-        ? '<C:time-range start="${_formatUtc(start)}" end="${_formatUtc(end)}"/>'
+        ? '<C:time-range start="${ICalendarUtils.formatUtc(start)}" end="${ICalendarUtils.formatUtc(end)}"/>'
         : '';
 
     return '''<?xml version="1.0" encoding="utf-8"?>
@@ -394,15 +356,5 @@ class EventService {
     </C:comp-filter>
   </C:filter>
 </C:calendar-query>''';
-  }
-
-  String _formatUtc(DateTime dt) {
-    final utc = dt.toUtc();
-    return '${utc.year.toString().padLeft(4, '0')}'
-        '${utc.month.toString().padLeft(2, '0')}'
-        '${utc.day.toString().padLeft(2, '0')}T'
-        '${utc.hour.toString().padLeft(2, '0')}'
-        '${utc.minute.toString().padLeft(2, '0')}'
-        '${utc.second.toString().padLeft(2, '0')}Z';
   }
 }

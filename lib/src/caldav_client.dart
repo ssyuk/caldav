@@ -56,14 +56,22 @@ class CalDavClient {
   /// [password] Password for authentication
   /// [connectTimeout] Connection timeout (default: 30 seconds)
   /// [receiveTimeout] Receive timeout (default: 30 seconds)
+  /// [allowInsecure] Allow HTTP connections (default: false, for development only)
+  ///
+  /// **Security Warning**: By default, only HTTPS connections are allowed.
+  /// Using HTTP transmits credentials in plain text and is vulnerable to
+  /// man-in-the-middle attacks. Only set [allowInsecure] to true for local
+  /// development or testing purposes.
   factory CalDavClient({
     required String baseUrl,
     required String username,
     required String password,
     Duration connectTimeout = const Duration(seconds: 30),
     Duration receiveTimeout = const Duration(seconds: 30),
+    bool allowInsecure = false,
   }) {
     final uri = Uri.parse(baseUrl);
+    _validateSecureConnection(uri, allowInsecure);
 
     final dio = Dio(BaseOptions(
       baseUrl: baseUrl,
@@ -92,13 +100,20 @@ class CalDavClient {
   ///
   /// [baseUrl] CalDAV server base URL
   /// [token] Bearer token for authentication
+  /// [allowInsecure] Allow HTTP connections (default: false, for development only)
+  ///
+  /// **Security Warning**: By default, only HTTPS connections are allowed.
+  /// Using HTTP transmits tokens in plain text. Only set [allowInsecure]
+  /// to true for local development or testing purposes.
   factory CalDavClient.withToken({
     required String baseUrl,
     required String token,
     Duration connectTimeout = const Duration(seconds: 30),
     Duration receiveTimeout = const Duration(seconds: 30),
+    bool allowInsecure = false,
   }) {
     final uri = Uri.parse(baseUrl);
+    _validateSecureConnection(uri, allowInsecure);
 
     final dio = Dio(BaseOptions(
       baseUrl: baseUrl,
@@ -122,12 +137,18 @@ class CalDavClient {
 
   /// Create a CalDAV client with custom Dio instance
   ///
-  /// Use this for advanced configuration or custom authentication
+  /// Use this for advanced configuration or custom authentication.
+  /// [allowInsecure] Allow HTTP connections (default: false, for development only)
+  ///
+  /// **Security Warning**: By default, only HTTPS connections are allowed.
+  /// Only set [allowInsecure] to true for local development or testing purposes.
   factory CalDavClient.withDio({
     required String baseUrl,
     required Dio dio,
+    bool allowInsecure = false,
   }) {
     final uri = Uri.parse(baseUrl);
+    _validateSecureConnection(uri, allowInsecure);
     final webdavClient = DioWebDavClient(dio);
     final discoveryService = DiscoveryService(webdavClient, dio);
 
@@ -143,16 +164,30 @@ class CalDavClient {
   // Connection & Authentication
   // ============================================================
 
+  /// Validate that the connection uses HTTPS for security
+  static void _validateSecureConnection(Uri uri, bool allowInsecure) {
+    if (!allowInsecure && uri.scheme != 'https') {
+      throw CalDavException(
+        'Insecure connection not allowed. '
+        'Use HTTPS or set allowInsecure: true for development. '
+        'URL scheme: ${uri.scheme}',
+        statusCode: null,
+      );
+    }
+  }
+
   /// Create and connect a CalDAV client (recommended)
   ///
   /// Creates client, verifies authentication, and discovers endpoints.
   /// Throws [CalDavException] if authentication fails.
+  /// [allowInsecure] Allow HTTP connections (default: false, for development only)
   static Future<CalDavClient> connect({
     required String baseUrl,
     required String username,
     required String password,
     Duration connectTimeout = const Duration(seconds: 30),
     Duration receiveTimeout = const Duration(seconds: 30),
+    bool allowInsecure = false,
   }) async {
     final client = CalDavClient(
       baseUrl: baseUrl,
@@ -160,6 +195,7 @@ class CalDavClient {
       password: password,
       connectTimeout: connectTimeout,
       receiveTimeout: receiveTimeout,
+      allowInsecure: allowInsecure,
     );
 
     final authenticated = await client.verifyAuth();
@@ -339,23 +375,63 @@ class CalDavClient {
     return _eventService!.multiGet(calendar, eventUrls);
   }
 
+  /// Get events from multiple calendars in parallel
+  ///
+  /// More efficient than calling getEvents for each calendar sequentially.
+  /// Returns a map of calendar UID to events list.
+  Future<Map<String, List<CalendarEvent>>> getEventsFromCalendars(
+    List<Calendar> calendars, {
+    DateTime? start,
+    DateTime? end,
+  }) async {
+    await _ensureDiscovered();
+
+    final futures = calendars.map((calendar) async {
+      final events = await _eventService!.list(calendar, start: start, end: end);
+      return MapEntry(calendar.uid, events);
+    });
+
+    final entries = await Future.wait(futures);
+    return Map.fromEntries(entries);
+  }
+
+  /// Get all events from all calendars in parallel
+  ///
+  /// Convenience method that combines getCalendars and getEventsFromCalendars.
+  Future<List<CalendarEvent>> getAllEvents({
+    DateTime? start,
+    DateTime? end,
+  }) async {
+    await _ensureDiscovered();
+    final calendars = await getCalendars();
+    final eventsMap = await getEventsFromCalendars(
+      calendars,
+      start: start,
+      end: end,
+    );
+    return eventsMap.values.expand((events) => events).toList();
+  }
+
   /// Find an event by UID across all calendars
   ///
   /// Uses server-side filtering via calendar-query for efficiency.
-  /// Searches through all calendars to find an event with the matching UID.
+  /// Searches all calendars in parallel for faster results.
   /// Returns null if no event is found.
   Future<CalendarEvent?> getEventByUid(String uid) async {
     await _ensureDiscovered();
     final calendars = await getCalendars();
 
-    for (final calendar in calendars) {
+    // Search all calendars in parallel for better performance
+    final futures = calendars.map((calendar) async {
       final event = await _eventService!.findByUid(calendar, uid);
-      if (event != null) {
-        return event.copyWith(calendarId: calendar.uid);
-      }
-    }
+      return event?.copyWith(calendarId: calendar.uid);
+    });
 
-    return null;
+    final results = await Future.wait(futures);
+    return results.firstWhere(
+      (event) => event != null,
+      orElse: () => null,
+    );
   }
 
   // ============================================================

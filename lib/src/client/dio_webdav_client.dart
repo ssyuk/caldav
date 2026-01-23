@@ -1,16 +1,16 @@
 import 'package:dio/dio.dart';
 
-/// WebDAV client wrapper for Dio supporting custom HTTP methods
-class DioWebDavClient {
+import 'webdav_client.dart';
+
+/// WebDAV client implementation using Dio HTTP library
+///
+/// Supports custom HTTP methods required by WebDAV/CalDAV protocol.
+class DioWebDavClient implements WebDavClient {
   final Dio dio;
 
   DioWebDavClient(this.dio);
 
-  /// PROPFIND - Retrieve properties of a resource
-  ///
-  /// [path] Resource path
-  /// [body] XML body with requested properties
-  /// [depth] 0 (resource only), 1 (resource + children), infinity
+  @override
   Future<Response<String>> propfind(
     String path, {
     required String body,
@@ -30,7 +30,7 @@ class DioWebDavClient {
     );
   }
 
-  /// PROPPATCH - Modify properties of a resource
+  @override
   Future<Response<String>> proppatch(
     String path, {
     required String body,
@@ -48,7 +48,7 @@ class DioWebDavClient {
     );
   }
 
-  /// MKCALENDAR - Create a new calendar collection (CalDAV)
+  @override
   Future<Response<String>> mkcalendar(
     String path, {
     String? body,
@@ -66,9 +66,7 @@ class DioWebDavClient {
     );
   }
 
-  /// REPORT - Query calendar data (CalDAV)
-  ///
-  /// Used for calendar-query and calendar-multiget
+  @override
   Future<Response<String>> report(
     String path, {
     required String body,
@@ -88,7 +86,7 @@ class DioWebDavClient {
     );
   }
 
-  /// PUT - Create or update a resource
+  @override
   Future<Response<String>> put(
     String path, {
     required String body,
@@ -113,7 +111,7 @@ class DioWebDavClient {
     );
   }
 
-  /// DELETE - Remove a resource
+  @override
   Future<Response<String>> delete(
     String path, {
     String? ifMatch,
@@ -131,7 +129,7 @@ class DioWebDavClient {
     );
   }
 
-  /// GET - Retrieve a resource
+  @override
   Future<Response<String>> get(String path) async {
     return dio.get<String>(
       path,
@@ -139,7 +137,7 @@ class DioWebDavClient {
     );
   }
 
-  /// OPTIONS - Check server capabilities
+  @override
   Future<Response<String>> options(String path) async {
     return dio.request<String>(
       path,

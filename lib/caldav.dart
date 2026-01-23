@@ -37,6 +37,8 @@ library;
 
 // Main client
 export 'src/caldav_client.dart' show CalDavClient;
+// Client interfaces
+export 'src/client/webdav_client.dart' show WebDavClient;
 // Models
 export 'src/calendar/calendar.dart' show Calendar;
 export 'src/discovery/discovery_result.dart' show DiscoveryResult;
