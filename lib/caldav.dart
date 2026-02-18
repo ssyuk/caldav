@@ -48,6 +48,7 @@ export 'src/exceptions/caldav_exception.dart'
     show
         CalDavException,
         AuthenticationException,
+        ForbiddenException,
         NotFoundException,
         ConflictException,
         DiscoveryException,

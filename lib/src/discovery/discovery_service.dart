@@ -113,6 +113,12 @@ class DiscoveryService {
 
       return endpoint.resolve(href);
     } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw const AuthenticationException();
+      }
+      if (e.response?.statusCode == 403) {
+        throw const ForbiddenException();
+      }
       throw DiscoveryException(
         'Failed to discover principal: ${e.message}',
       );
@@ -163,6 +169,12 @@ class DiscoveryService {
 
       return (principalUrl.resolve(href), displayName);
     } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw const AuthenticationException();
+      }
+      if (e.response?.statusCode == 403) {
+        throw const ForbiddenException();
+      }
       throw DiscoveryException(
         'Failed to discover calendar home: ${e.message}',
       );

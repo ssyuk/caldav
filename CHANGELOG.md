@@ -1,3 +1,9 @@
+## 1.4.2
+- Added `ForbiddenException` for HTTP 403 (insufficient permissions)
+- Added read-only calendar/event guard on write operations (`createEvent`, `updateEvent`, `deleteEvent`, `updateCalendar`, `deleteCalendar`)
+- Fixed `validateStatus` to properly reject HTTP 4xx responses (previously treated as success)
+- Added consistent HTTP status code error mapping (401, 403, 404) across all services
+
 ## 1.4.1
 - Fixed all-day event DTEND exclusive date handling per RFC 5545
   - Parsing (server → app): Converts exclusive DTEND to inclusive end date

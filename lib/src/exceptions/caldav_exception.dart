@@ -25,6 +25,12 @@ class AuthenticationException extends CalDavException {
       : super(statusCode: 401);
 }
 
+/// Forbidden - insufficient permissions (403)
+class ForbiddenException extends CalDavException {
+  const ForbiddenException([super.message = 'Insufficient permissions'])
+      : super(statusCode: 403);
+}
+
 /// Resource not found (404)
 class NotFoundException extends CalDavException {
   const NotFoundException([super.message = 'Resource not found'])

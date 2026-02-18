@@ -77,7 +77,7 @@ class CalDavClient {
       baseUrl: baseUrl,
       connectTimeout: connectTimeout,
       receiveTimeout: receiveTimeout,
-      validateStatus: (status) => status != null && status < 500,
+      validateStatus: (status) => status != null && status < 400,
     ));
 
     dio.interceptors.add(BasicAuthInterceptor(
@@ -119,7 +119,7 @@ class CalDavClient {
       baseUrl: baseUrl,
       connectTimeout: connectTimeout,
       receiveTimeout: receiveTimeout,
-      validateStatus: (status) => status != null && status < 500,
+      validateStatus: (status) => status != null && status < 400,
     ));
 
     dio.interceptors.add(BearerAuthInterceptor(token));
@@ -296,13 +296,15 @@ class CalDavClient {
 
   /// Update calendar properties
   ///
-  /// Only provided properties will be updated
+  /// Only provided properties will be updated.
+  /// Throws [ForbiddenException] if the calendar is read-only.
   Future<void> updateCalendar(
     Calendar calendar, {
     String? displayName,
     String? description,
     String? color,
   }) async {
+    _ensureWritable(calendar);
     await _ensureDiscovered();
     return _calendarService!.update(
       calendar,
@@ -314,8 +316,10 @@ class CalDavClient {
 
   /// Delete a calendar
   ///
-  /// Warning: This will delete all events in the calendar
+  /// Warning: This will delete all events in the calendar.
+  /// Throws [ForbiddenException] if the calendar is read-only.
   Future<void> deleteCalendar(Calendar calendar) async {
+    _ensureWritable(calendar);
     await _ensureDiscovered();
     return _calendarService!.delete(calendar);
   }
@@ -340,11 +344,13 @@ class CalDavClient {
 
   /// Create a new event
   ///
-  /// Returns the created event with href and etag set
+  /// Returns the created event with href and etag set.
+  /// Throws [ForbiddenException] if the calendar is read-only.
   Future<CalendarEvent> createEvent(
     Calendar calendar,
     CalendarEvent event,
   ) async {
+    _ensureWritable(calendar);
     await _ensureDiscovered();
     return _eventService!.create(calendar, event);
   }
@@ -353,7 +359,11 @@ class CalDavClient {
   ///
   /// Uses ETag for optimistic locking if available.
   /// Throws [ConflictException] if the event was modified by another client.
+  /// Throws [ForbiddenException] if the event is read-only.
   Future<CalendarEvent> updateEvent(CalendarEvent event) async {
+    if (event.isReadOnly) {
+      throw const ForbiddenException('Cannot update a read-only event');
+    }
     await _ensureDiscovered();
     return _eventService!.update(event);
   }
@@ -361,7 +371,11 @@ class CalDavClient {
   /// Delete an event
   ///
   /// Throws [ConflictException] if the event was modified by another client.
+  /// Throws [ForbiddenException] if the event is read-only.
   Future<void> deleteEvent(CalendarEvent event) async {
+    if (event.isReadOnly) {
+      throw const ForbiddenException('Cannot delete a read-only event');
+    }
     await _ensureDiscovered();
     return _eventService!.delete(event);
   }
@@ -452,6 +466,12 @@ class CalDavClient {
   // ============================================================
   // Private
   // ============================================================
+
+  static void _ensureWritable(Calendar calendar) {
+    if (calendar.isReadOnly) {
+      throw const ForbiddenException('Cannot modify a read-only calendar');
+    }
+  }
 
   Future<void> _ensureDiscovered() async {
     if (_discoveryResult == null) {

@@ -38,10 +38,7 @@ class CalendarService {
           .map(_parseCalendar)
           .toList();
     } on DioException catch (e) {
-      throw CalDavException(
-        'Failed to list calendars: ${e.message}',
-        statusCode: e.response?.statusCode,
-      );
+      throw _mapException(e, 'Failed to list calendars');
     } on Exception catch (e) {
       throw CalDavException('Failed to parse calendar list: $e');
     }
@@ -67,13 +64,7 @@ class CalendarService {
 
       return _parseCalendar(davResponse);
     } on DioException catch (e) {
-      if (e.response?.statusCode == 404) {
-        throw const NotFoundException('Calendar not found');
-      }
-      throw CalDavException(
-        'Failed to get calendar: ${e.message}',
-        statusCode: e.response?.statusCode,
-      );
+      throw _mapException(e, 'Failed to get calendar');
     }
   }
 
@@ -102,12 +93,12 @@ class CalendarService {
       return await get(calendarPath);
     } on DioException catch (e) {
       if (e.response?.statusCode == 405) {
-        throw const CalDavException('Calendar already exists or creation not allowed');
+        throw const CalDavException(
+          'Calendar already exists or creation not allowed',
+          statusCode: 405,
+        );
       }
-      throw CalDavException(
-        'Failed to create calendar: ${e.message}',
-        statusCode: e.response?.statusCode,
-      );
+      throw _mapException(e, 'Failed to create calendar');
     }
   }
 
@@ -127,10 +118,7 @@ class CalendarService {
     try {
       await _client.proppatch(calendar.href.toString(), body: body);
     } on DioException catch (e) {
-      throw CalDavException(
-        'Failed to update calendar: ${e.message}',
-        statusCode: e.response?.statusCode,
-      );
+      throw _mapException(e, 'Failed to update calendar');
     }
   }
 
@@ -139,14 +127,20 @@ class CalendarService {
     try {
       await _client.delete(calendar.href.toString());
     } on DioException catch (e) {
-      if (e.response?.statusCode == 404) {
-        throw const NotFoundException('Calendar not found');
-      }
-      throw CalDavException(
-        'Failed to delete calendar: ${e.message}',
-        statusCode: e.response?.statusCode,
-      );
+      throw _mapException(e, 'Failed to delete calendar');
     }
+  }
+
+  static CalDavException _mapException(DioException e, String context) {
+    return switch (e.response?.statusCode) {
+      401 => const AuthenticationException(),
+      403 => const ForbiddenException(),
+      404 => const NotFoundException(),
+      _ => CalDavException(
+          '$context: ${e.message}',
+          statusCode: e.response?.statusCode,
+        ),
+    };
   }
 
   Calendar _parseCalendar(DavResponse response) {
@@ -243,6 +237,7 @@ class CalendarService {
       for (final privilege in privilegeElement.childElements) {
         if (privilege.namespaceUri == XmlNamespaces.dav &&
             writePrivileges.contains(privilege.localName)) {
+          print("is not read only because of ${privilege.localName}");
           return false; // Has write privilege, not read-only
         }
       }

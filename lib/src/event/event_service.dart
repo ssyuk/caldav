@@ -97,10 +97,7 @@ class EventService {
 
       return [];
     } on DioException catch (e) {
-      throw CalDavException(
-        'Failed to list events: ${e.message}',
-        statusCode: e.response?.statusCode,
-      );
+      throw _mapException(e, 'Failed to list events');
     }
   }
 
@@ -135,10 +132,7 @@ class EventService {
       final multiStatus = MultiStatus.fromXml(response.data ?? '');
       return _parseEventsFromResponses(multiStatus.responses, calendar);
     } on DioException catch (e) {
-      throw CalDavException(
-        'Failed to fetch events: ${e.message}',
-        statusCode: e.response?.statusCode,
-      );
+      throw _mapException(e, 'Failed to fetch events');
     }
   }
 
@@ -165,10 +159,7 @@ class EventService {
       if (e.response?.statusCode == 412) {
         throw const ConflictException('Event already exists');
       }
-      throw CalDavException(
-        'Failed to create event: ${e.message}',
-        statusCode: e.response?.statusCode,
-      );
+      throw _mapException(e, 'Failed to create event');
     }
   }
 
@@ -195,13 +186,7 @@ class EventService {
         throw const ConflictException(
             'Event was modified by another client. Please refresh and try again.');
       }
-      if (e.response?.statusCode == 404) {
-        throw const NotFoundException('Event not found');
-      }
-      throw CalDavException(
-        'Failed to update event: ${e.message}',
-        statusCode: e.response?.statusCode,
-      );
+      throw _mapException(e, 'Failed to update event');
     }
   }
 
@@ -225,10 +210,7 @@ class EventService {
         throw const ConflictException(
             'Event was modified by another client. Please refresh and try again.');
       }
-      throw CalDavException(
-        'Failed to delete event: ${e.message}',
-        statusCode: e.response?.statusCode,
-      );
+      throw _mapException(e, 'Failed to delete event');
     }
   }
 
@@ -262,10 +244,7 @@ class EventService {
       final multiStatus = MultiStatus.fromXml(response.data ?? '');
       return _parseEventsFromResponses(multiStatus.responses, calendar);
     } on DioException catch (e) {
-      throw CalDavException(
-        'Failed to get events: ${e.message}',
-        statusCode: e.response?.statusCode,
-      );
+      throw _mapException(e, 'Failed to get events');
     }
   }
 
@@ -306,11 +285,20 @@ class EventService {
 
       return null;
     } on DioException catch (e) {
-      throw CalDavException(
-        'Failed to find event by UID: ${e.message}',
-        statusCode: e.response?.statusCode,
-      );
+      throw _mapException(e, 'Failed to find event by UID');
     }
+  }
+
+  static CalDavException _mapException(DioException e, String context) {
+    return switch (e.response?.statusCode) {
+      401 => const AuthenticationException(),
+      403 => const ForbiddenException(),
+      404 => const NotFoundException(),
+      _ => CalDavException(
+          '$context: ${e.message}',
+          statusCode: e.response?.statusCode,
+        ),
+    };
   }
 
   String _buildUidQueryBody(String uid) {

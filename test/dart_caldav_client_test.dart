@@ -53,7 +53,7 @@ END:VCALENDAR''';
         expect(event.location, equals('Conference Room A'));
       });
 
-      test('parses all-day event', () {
+      test('parses single-day all-day event with exclusive DTEND', () {
         const icalendar = '''BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
@@ -71,9 +71,52 @@ END:VCALENDAR''';
 
         expect(event, isNotNull);
         expect(event!.isAllDay, isTrue);
-        expect(event.start.year, equals(2024));
-        expect(event.start.month, equals(1));
-        expect(event.start.day, equals(15));
+        expect(event.start, equals(DateTime.utc(2024, 1, 15)));
+        // Single-day: DTEND(16) - DTSTART(15) = 1 day → end should be null
+        expect(event.end, isNull);
+      });
+
+      test('parses multi-day all-day event with exclusive DTEND', () {
+        const icalendar = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:allday-multi-123
+DTSTART;VALUE=DATE:20260223
+DTEND;VALUE=DATE:20260226
+SUMMARY:3-Day Event
+END:VEVENT
+END:VCALENDAR''';
+
+        final event = ICalendarParser.parseEvent(
+          icalendar,
+          calendarId: 'calendar-1',
+        );
+
+        expect(event, isNotNull);
+        expect(event!.isAllDay, isTrue);
+        expect(event.start, equals(DateTime.utc(2026, 2, 23)));
+        // Multi-day: DTEND(26) - 1 day = 25 (inclusive)
+        expect(event.end, equals(DateTime.utc(2026, 2, 25)));
+      });
+
+      test('parses all-day event without DTEND', () {
+        const icalendar = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:allday-no-end
+DTSTART;VALUE=DATE:20240115
+SUMMARY:No End All Day
+END:VEVENT
+END:VCALENDAR''';
+
+        final event = ICalendarParser.parseEvent(
+          icalendar,
+          calendarId: 'calendar-1',
+        );
+
+        expect(event, isNotNull);
+        expect(event!.isAllDay, isTrue);
+        expect(event.end, isNull);
       });
 
       test('parses event with RRULE', () {
@@ -274,12 +317,11 @@ END:VCALENDAR''';
         expect(icalendar, contains('END:VCALENDAR'));
       });
 
-      test('serializes all-day event', () {
+      test('serializes single-day all-day event (end null)', () {
         final event = CalendarEvent(
           uid: 'allday-123',
           calendarId: 'calendar-1',
           start: DateTime.utc(2024, 1, 15),
-          end: DateTime.utc(2024, 1, 16),
           summary: 'All Day Event',
           isAllDay: true,
         );
@@ -287,6 +329,41 @@ END:VCALENDAR''';
         final icalendar = event.toIcalendar();
 
         expect(icalendar, contains('DTSTART;VALUE=DATE:20240115'));
+        // null end → exclusive DTEND = start + 1 day
+        expect(icalendar, contains('DTEND;VALUE=DATE:20240116'));
+      });
+
+      test('serializes multi-day all-day event (inclusive → exclusive)', () {
+        final event = CalendarEvent(
+          uid: 'allday-multi-123',
+          calendarId: 'calendar-1',
+          start: DateTime.utc(2026, 2, 23),
+          end: DateTime.utc(2026, 2, 25), // inclusive: 23, 24, 25
+          summary: '3-Day Event',
+          isAllDay: true,
+        );
+
+        final icalendar = event.toIcalendar();
+
+        expect(icalendar, contains('DTSTART;VALUE=DATE:20260223'));
+        // inclusive end 25 → exclusive DTEND = 26
+        expect(icalendar, contains('DTEND;VALUE=DATE:20260226'));
+      });
+
+      test('serializes single-day all-day event (end == start)', () {
+        final event = CalendarEvent(
+          uid: 'allday-same-123',
+          calendarId: 'calendar-1',
+          start: DateTime.utc(2024, 1, 15),
+          end: DateTime.utc(2024, 1, 15), // same as start
+          summary: 'Same Day Event',
+          isAllDay: true,
+        );
+
+        final icalendar = event.toIcalendar();
+
+        expect(icalendar, contains('DTSTART;VALUE=DATE:20240115'));
+        // end == start → exclusive DTEND = start + 1 day
         expect(icalendar, contains('DTEND;VALUE=DATE:20240116'));
       });
 
@@ -351,6 +428,68 @@ END:VCALENDAR''';
           icalendar,
           contains('EXDATE:20240122T100000Z,20240129T100000Z'),
         );
+      });
+    });
+
+    group('all-day roundtrip', () {
+      test('single-day event survives parse → serialize → parse', () {
+        const icalendar = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:roundtrip-single
+DTSTART;VALUE=DATE:20260223
+DTEND;VALUE=DATE:20260224
+SUMMARY:One Day
+END:VEVENT
+END:VCALENDAR''';
+
+        final parsed = ICalendarParser.parseEvent(
+          icalendar,
+          calendarId: 'cal-1',
+        );
+        expect(parsed, isNotNull);
+        expect(parsed!.end, isNull);
+
+        final serialized = parsed.toIcalendar();
+        expect(serialized, contains('DTEND;VALUE=DATE:20260224'));
+
+        final reparsed = ICalendarParser.parseEvent(
+          serialized,
+          calendarId: 'cal-1',
+        );
+        expect(reparsed, isNotNull);
+        expect(reparsed!.start, equals(parsed.start));
+        expect(reparsed.end, isNull);
+      });
+
+      test('multi-day event survives parse → serialize → parse', () {
+        const icalendar = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:roundtrip-multi
+DTSTART;VALUE=DATE:20260223
+DTEND;VALUE=DATE:20260226
+SUMMARY:Three Days
+END:VEVENT
+END:VCALENDAR''';
+
+        final parsed = ICalendarParser.parseEvent(
+          icalendar,
+          calendarId: 'cal-1',
+        );
+        expect(parsed, isNotNull);
+        expect(parsed!.end, equals(DateTime.utc(2026, 2, 25)));
+
+        final serialized = parsed.toIcalendar();
+        expect(serialized, contains('DTEND;VALUE=DATE:20260226'));
+
+        final reparsed = ICalendarParser.parseEvent(
+          serialized,
+          calendarId: 'cal-1',
+        );
+        expect(reparsed, isNotNull);
+        expect(reparsed!.start, equals(parsed.start));
+        expect(reparsed.end, equals(parsed.end));
       });
     });
 
