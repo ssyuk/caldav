@@ -237,7 +237,6 @@ class CalendarService {
       for (final privilege in privilegeElement.childElements) {
         if (privilege.namespaceUri == XmlNamespaces.dav &&
             writePrivileges.contains(privilege.localName)) {
-          print("is not read only because of ${privilege.localName}");
           return false; // Has write privilege, not read-only
         }
       }

@@ -8,8 +8,11 @@ A comprehensive Dart client library for CalDAV servers (RFC 4791). Provides high
 - **Calendar Management** - List, create, update, delete calendars with unique identifiers
 - **Event Management** - Full CRUD operations with iCalendar (RFC 5545) support
 - **Event Search** - Find events by UID across all calendars with server-side filtering
-- **Multiple Authentication** - Basic Auth and Bearer Token (OAuth)
+- **Parallel Fetching** - Fetch events from multiple calendars concurrently
+- **Multiple Authentication** - Basic Auth, Bearer Token (OAuth), and custom Dio
 - **Conflict Detection** - ETag-based optimistic locking
+- **Read-Only Protection** - ACL-based read-only detection with write guards
+- **HTTPS by Default** - Secure connections enforced with opt-out for development
 
 ## Installation
 
@@ -17,7 +20,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  caldav: ^1.4.0
+  caldav: ^1.4.2+3
 ```
 
 ## Quick Start
@@ -76,7 +79,7 @@ final client = await CalDavClient.connect(
 );
 ```
 
-⚠️ **Warning**: Using HTTP transmits credentials in plain text and is vulnerable to man-in-the-middle attacks. Only use `allowInsecure: true` for local development.
+> **Warning**: Using HTTP transmits credentials in plain text and is vulnerable to man-in-the-middle attacks. Only use `allowInsecure: true` for local development.
 
 ## Authentication Methods
 
@@ -100,6 +103,21 @@ final client = CalDavClient.withToken(
 await client.discover();
 ```
 
+### Custom Dio Instance
+
+```dart
+final dio = Dio(BaseOptions(
+  baseUrl: 'https://caldav.example.com',
+  headers: {'Authorization': 'Custom scheme'},
+));
+
+final client = CalDavClient.withDio(
+  baseUrl: 'https://caldav.example.com',
+  dio: dio,
+);
+await client.discover();
+```
+
 ## Calendar Operations
 
 ### List Calendars
@@ -110,7 +128,7 @@ for (final cal in calendars) {
   print('${cal.displayName} (uid: ${cal.uid})');
   print('  URL: ${cal.href}');
   print('  Color: ${cal.color}');
-  print('  Timezone: ${cal.timezone}');
+  print('  Read-only: ${cal.isReadOnly}');
 }
 ```
 
@@ -141,7 +159,9 @@ await client.updateCalendar(
 await client.deleteCalendar(calendar);
 ```
 
-### Check Read-Only Status
+### Read-Only Calendars
+
+Shared or subscribed calendars may be read-only. Write operations (`createEvent`, `updateEvent`, `deleteEvent`, `updateCalendar`, `deleteCalendar`) automatically throw `ForbiddenException` when attempted on read-only calendars.
 
 ```dart
 final calendars = await client.getCalendars();
@@ -211,6 +231,7 @@ if (event != null) {
 ```dart
 final event = CalendarEvent(
   uid: 'unique-event-id-${DateTime.now().millisecondsSinceEpoch}',
+  calendarId: calendar.uid,
   start: DateTime.utc(2024, 6, 15, 14, 0),
   end: DateTime.utc(2024, 6, 15, 15, 0),
   summary: 'Team Meeting',
@@ -223,15 +244,30 @@ final created = await client.createEvent(calendar, event);
 
 ### Create All-Day Event
 
+All-day events use **inclusive** dates. A single-day event only needs `start`:
+
 ```dart
-final event = CalendarEvent(
-  uid: 'all-day-event-id',
+// Single-day all-day event (June 15 only)
+final singleDay = CalendarEvent(
+  uid: 'single-day-event',
+  calendarId: calendar.uid,
   start: DateTime.utc(2024, 6, 15),
-  end: DateTime.utc(2024, 6, 16),
   summary: 'Company Holiday',
   isAllDay: true,
 );
+
+// Multi-day all-day event (June 15 to June 17, inclusive)
+final multiDay = CalendarEvent(
+  uid: 'multi-day-event',
+  calendarId: calendar.uid,
+  start: DateTime.utc(2024, 6, 15),
+  end: DateTime.utc(2024, 6, 17),
+  summary: 'Summer Retreat',
+  isAllDay: true,
+);
 ```
+
+> **Note**: The library handles RFC 5545 exclusive DTEND conversion automatically. You always work with inclusive dates - the library converts to/from the exclusive format required by the protocol.
 
 ### Update Event
 
@@ -275,7 +311,7 @@ for (final event in events) {
 }
 ```
 
-**Note:** The library provides raw RRULE strings. For recurrence expansion, use a dedicated library like `rrule`.
+> **Note**: The library provides raw RRULE strings. For recurrence expansion, use a dedicated library like `rrule`.
 
 ## Data Models
 
@@ -283,7 +319,7 @@ for (final event in events) {
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `uid` | `String?` | Unique identifier (DAV:geteuid) |
+| `uid` | `String` | Unique identifier (DAV:geteuid or href fallback) |
 | `href` | `Uri` | Calendar resource URL |
 | `displayName` | `String` | Display name |
 | `description` | `String?` | Calendar description |
@@ -298,11 +334,11 @@ for (final event in events) {
 | Property | Type | Description |
 |----------|------|-------------|
 | `uid` | `String` | Unique identifier (iCalendar UID) |
-| `calendarId` | `String?` | Parent calendar's UID |
+| `calendarId` | `String` | Parent calendar's UID |
 | `href` | `Uri?` | Event resource URL |
 | `etag` | `String?` | Entity tag for concurrency |
 | `start` | `DateTime` | Start time (UTC) |
-| `end` | `DateTime?` | End time (UTC) |
+| `end` | `DateTime?` | End time (UTC, inclusive for all-day events) |
 | `summary` | `String` | Event title |
 | `description` | `String?` | Event description |
 | `location` | `String?` | Event location |
@@ -318,10 +354,16 @@ for (final event in events) {
 ```dart
 try {
   final calendars = await client.getCalendars();
+} on AuthenticationException catch (e) {
+  print('Authentication failed: ${e.message}');
+} on ForbiddenException catch (e) {
+  print('Insufficient permissions: ${e.message}');
 } on NotFoundException catch (e) {
   print('Resource not found: ${e.message}');
 } on ConflictException catch (e) {
   print('Concurrent modification: ${e.message}');
+} on DiscoveryException catch (e) {
+  print('Server discovery failed: ${e.message}');
 } on CalDavException catch (e) {
   print('CalDAV error: ${e.statusCode} - ${e.message}');
 }
@@ -332,8 +374,12 @@ try {
 | Exception | Status Code | Description |
 |-----------|-------------|-------------|
 | `CalDavException` | Various | Base exception for CalDAV errors |
+| `AuthenticationException` | 401 | Authentication failed |
+| `ForbiddenException` | 403 | Insufficient permissions (read-only calendar/event) |
 | `NotFoundException` | 404 | Resource not found |
-| `ConflictException` | 409, 412 | Concurrent modification conflict |
+| `ConflictException` | 409, 412 | Concurrent modification conflict (ETag mismatch) |
+| `DiscoveryException` | - | CalDAV endpoint discovery failed |
+| `ParseException` | - | XML/iCalendar parsing failed |
 
 ## Protocol Support
 
@@ -342,4 +388,4 @@ try {
 | 4791 | CalDAV | Full core support |
 | 4918 | WebDAV | PROPFIND, PROPPATCH, MKCALENDAR, REPORT |
 | 6764 | CalDAV Discovery | Full implementation |
-| 5545 | iCalendar | Parsing and generation |
+| 5545 | iCalendar | Parsing and generation (VEVENT, RRULE, EXDATE) |
