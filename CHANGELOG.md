@@ -1,3 +1,6 @@
+## 1.4.2+2
+- Removed unnecessary files
+
 ## 1.4.2
 - Added `ForbiddenException` for HTTP 403 (insufficient permissions)
 - Added read-only calendar/event guard on write operations (`createEvent`, `updateEvent`, `deleteEvent`, `updateCalendar`, `deleteCalendar`)
