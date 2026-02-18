@@ -124,9 +124,12 @@ class CalendarEvent {
 
     if (isAllDay) {
       buffer.writeln('DTSTART;VALUE=DATE:${ICalendarUtils.formatDate(start)}');
-      if (end != null) {
-        buffer.writeln('DTEND;VALUE=DATE:${ICalendarUtils.formatDate(end!)}');
-      }
+      // Convert inclusive end to exclusive DTEND (RFC 5545)
+      final exclusiveEnd = (end == null || end == start)
+          ? start.add(const Duration(days: 1))
+          : end!.add(const Duration(days: 1));
+      buffer.writeln(
+          'DTEND;VALUE=DATE:${ICalendarUtils.formatDate(exclusiveEnd)}');
     } else {
       buffer.writeln('DTSTART:${ICalendarUtils.formatUtc(start.toUtc())}');
       if (end != null) {

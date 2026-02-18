@@ -56,13 +56,28 @@ class ICalendarParser {
     // Parse EXDATE (may have multiple values separated by comma, or multiple EXDATE lines)
     final exdate = _parseExdate(eventLines);
 
+    // Convert exclusive DTEND to inclusive for all-day events (RFC 5545)
+    final DateTime? inclusiveEnd;
+    if (isAllDay && dtend != null) {
+      final days = dtend.difference(dtstart).inDays;
+      if (days <= 1) {
+        // Single-day event: DTEND is just start + 1 day
+        inclusiveEnd = null;
+      } else {
+        // Multi-day event: subtract 1 day to make inclusive
+        inclusiveEnd = dtend.subtract(const Duration(days: 1));
+      }
+    } else {
+      inclusiveEnd = dtend;
+    }
+
     return CalendarEvent(
       uid: uid,
       calendarId: calendarId,
       href: href,
       etag: etag,
       start: dtstart,
-      end: dtend,
+      end: inclusiveEnd,
       summary: _unescapeIcalText(summary),
       description: properties['DESCRIPTION'] != null
           ? _unescapeIcalText(properties['DESCRIPTION']!)

@@ -1,3 +1,11 @@
+## 1.4.1
+- Fixed all-day event DTEND exclusive date handling per RFC 5545
+  - Parsing (server → app): Converts exclusive DTEND to inclusive end date
+  - Serialization (app → server): Converts inclusive end date to exclusive DTEND
+  - Single-day events (DTEND = DTSTART + 1) now correctly set `end` to `null`
+  - Multi-day events subtract 1 day from DTEND for inclusive representation
+  - App consumers always work with inclusive end dates
+
 ## 1.4.0
 - Added HTTPS enforcement by default with `allowInsecure` parameter for development
 - Added `getEventsFromCalendars()` for parallel event fetching across multiple calendars
