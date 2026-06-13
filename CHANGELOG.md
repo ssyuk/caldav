@@ -1,13 +1,8 @@
 ## 1.5.0
-
-### Added
 - VTODO (task) support. Calendars containing `VTODO` items can now be read and managed (issue #1).
   - New `CalendarTodo` model and `TodoStatus` enum, sharing a new `CalendarComponent` base with `CalendarEvent`.
   - `ICalendarParser.parseTodo` / `parseTodos` for VTODO parsing (DTSTART/DUE optional; STATUS/COMPLETED/PERCENT-COMPLETE/PRIORITY supported).
   - `CalDavClient.getTodos`, `createTodo`, `updateTodo`, `deleteTodo`, `getTodoByUid`.
-
-### Notes
-- Non-breaking: `CalendarEvent`'s public API is unchanged. `CalendarEvent` now extends `CalendarComponent`.
 
 ## 1.4.2+3
 - Removed debug print statements
