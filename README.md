@@ -313,6 +313,62 @@ for (final event in events) {
 
 > **Note**: The library provides raw RRULE strings. For recurrence expansion, use a dedicated library like `rrule`.
 
+## Todo Operations (VTODO)
+
+Calendars that support `VTODO` components can be managed with a parallel set of methods.
+
+### Get Todos
+
+```dart
+final todos = await client.getTodos(calendar);
+for (final todo in todos) {
+  print('${todo.summary} (done: ${todo.isCompleted})');
+  if (todo.due != null) {
+    print('  Due: ${todo.due}');
+  }
+}
+```
+
+### Create Todo
+
+```dart
+final todo = CalendarTodo(
+  uid: 'todo-${DateTime.now().millisecondsSinceEpoch}',
+  calendarId: calendar.uid,
+  summary: 'Buy groceries',
+  due: DateTime.utc(2026, 6, 20),
+  priority: 5,
+);
+
+final created = await client.createTodo(calendar, todo);
+```
+
+### Mark a Todo as Complete
+
+```dart
+final completed = await client.updateTodo(
+  created.copyWith(
+    status: TodoStatus.completed,
+    percentComplete: 100,
+  ),
+);
+```
+
+### Delete Todo
+
+```dart
+await client.deleteTodo(todo);
+```
+
+### Find Todo by UID
+
+```dart
+final found = await client.getTodoByUid('todo-uid');
+if (found != null) {
+  print('Found: ${found.summary}');
+}
+```
+
 ## Data Models
 
 ### Calendar

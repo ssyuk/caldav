@@ -46,6 +46,11 @@ void main() async {
           print('    id: ${event.uid}');
         }
       }
+
+      final todos = await client.getTodos(calendar);
+      for (final todo in todos) {
+        print('  Todo: ${todo.summary} (done: ${todo.isCompleted})');
+      }
     }
 
     // Example: Find event by UID
