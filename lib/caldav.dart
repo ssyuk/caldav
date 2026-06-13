@@ -43,6 +43,8 @@ export 'src/client/webdav_client.dart' show WebDavClient;
 export 'src/calendar/calendar.dart' show Calendar;
 export 'src/discovery/discovery_result.dart' show DiscoveryResult;
 export 'src/event/event.dart' show CalendarEvent;
+export 'src/event/calendar_component.dart' show CalendarComponent;
+export 'src/event/todo.dart' show CalendarTodo, TodoStatus;
 // Exceptions
 export 'src/exceptions/caldav_exception.dart'
     show
