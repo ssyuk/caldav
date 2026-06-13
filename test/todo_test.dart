@@ -69,5 +69,14 @@ void main() {
       expect(original.summary, equals('Original'));
       expect(original.status, equals(TodoStatus.needsAction));
     });
+
+    test('equality is by uid', () {
+      const a = CalendarTodo(uid: 't', calendarId: 'c', summary: 'A');
+      const b = CalendarTodo(uid: 't', calendarId: 'c', summary: 'B');
+      const c = CalendarTodo(uid: 'x', calendarId: 'c', summary: 'A');
+      expect(a, equals(b));
+      expect(a, isNot(equals(c)));
+      expect(a.hashCode, equals(b.hashCode));
+    });
   });
 }
