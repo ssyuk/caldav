@@ -268,4 +268,51 @@ END:VCALENDAR''';
       expect(todos[1].uid, equals('t2'));
     });
   });
+
+  group('CalendarTodo round-trip', () {
+    test('timed todo survives parse → serialize → parse', () {
+      const ical = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:rt-1
+DTSTART:20260301T090000Z
+DUE:20260310T170000Z
+SUMMARY:Round trip
+STATUS:IN-PROCESS
+PRIORITY:3
+END:VTODO
+END:VCALENDAR''';
+
+      final parsed = ICalendarParser.parseTodo(ical, calendarId: 'c');
+      expect(parsed, isNotNull);
+
+      final reparsed =
+          ICalendarParser.parseTodo(parsed!.toIcalendar(), calendarId: 'c');
+      expect(reparsed, isNotNull);
+      expect(reparsed!.uid, equals('rt-1'));
+      expect(reparsed.summary, equals('Round trip'));
+      expect(reparsed.dtstart, equals(parsed.dtstart));
+      expect(reparsed.due, equals(parsed.due));
+      expect(reparsed.status, equals(TodoStatus.inProcess));
+      expect(reparsed.priority, equals(3));
+    });
+
+    test('all-day deadline survives round-trip without shifting', () {
+      const ical = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:rt-allday
+DUE;VALUE=DATE:20260310
+SUMMARY:All day
+END:VTODO
+END:VCALENDAR''';
+
+      final parsed = ICalendarParser.parseTodo(ical, calendarId: 'c');
+      final reparsed =
+          ICalendarParser.parseTodo(parsed!.toIcalendar(), calendarId: 'c');
+      expect(reparsed!.isAllDay, isTrue);
+      // DUE must NOT drift by a day (unlike VEVENT DTEND).
+      expect(reparsed.due, equals(DateTime.utc(2026, 3, 10)));
+    });
+  });
 }
