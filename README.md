@@ -7,6 +7,7 @@ A comprehensive Dart client library for CalDAV servers (RFC 4791). Provides high
 - **Server Discovery** (RFC 6764) - Automatic endpoint detection via `.well-known/caldav`
 - **Calendar Management** - List, create, update, delete calendars with unique identifiers
 - **Event Management** - Full CRUD operations with iCalendar (RFC 5545) support
+- **Task Management** — VTODO (to-do) CRUD with status, completion, and priority support
 - **Event Search** - Find events by UID across all calendars with server-side filtering
 - **Parallel Fetching** - Fetch events from multiple calendars concurrently
 - **Multiple Authentication** - Basic Auth, Bearer Token (OAuth), and custom Dio
@@ -20,7 +21,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  caldav: ^1.4.2+3
+  caldav: ^1.5.0
 ```
 
 ## Quick Start
