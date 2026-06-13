@@ -1,4 +1,5 @@
 import 'event.dart';
+import 'todo.dart';
 
 /// Parser for iCalendar (RFC 5545) data
 class ICalendarParser {
@@ -125,6 +126,134 @@ class ICalendarParser {
     }
 
     return events;
+  }
+
+  /// Parse iCalendar string to a single CalendarTodo (first VTODO).
+  ///
+  /// Unlike [parseEvent], a todo is valid even without DTSTART/DUE — only
+  /// UID is required.
+  static CalendarTodo? parseTodo(
+    String icalendar, {
+    required String calendarId,
+    Uri? href,
+    String? etag,
+    bool isReadOnly = false,
+  }) {
+    final lines = _unfoldLines(icalendar);
+    final todoLines = _extractComponent(lines, 'VTODO');
+
+    if (todoLines.isEmpty) return null;
+
+    final properties = _parseProperties(todoLines);
+
+    final uid = properties['UID'];
+    if (uid == null) return null;
+
+    final summary = properties['SUMMARY'] ?? 'Untitled';
+
+    final dtstart = _parseDateTime(
+      properties['DTSTART'],
+      properties['DTSTART;VALUE'],
+    );
+    final due = _parseDateTime(
+      properties['DUE'],
+      properties['DUE;VALUE'],
+    );
+
+    // All-day if either time field is date-only. Prefer DTSTART, fall back
+    // to DUE when DTSTART is absent.
+    final isAllDay = properties['DTSTART;VALUE'] == 'DATE' ||
+        (properties['DTSTART']?.length == 8) ||
+        (properties['DTSTART'] == null &&
+            (properties['DUE;VALUE'] == 'DATE' ||
+                properties['DUE']?.length == 8));
+
+    final status = _parseTodoStatus(properties['STATUS']);
+    final completed = _parseDateTime(properties['COMPLETED'], null);
+    final percentComplete = properties['PERCENT-COMPLETE'] != null
+        ? int.tryParse(properties['PERCENT-COMPLETE']!)
+        : null;
+    final priority = properties['PRIORITY'] != null
+        ? int.tryParse(properties['PRIORITY']!)
+        : null;
+
+    final rrule = properties['RRULE'];
+    final recurrenceId = properties['RECURRENCE-ID'];
+    final exdate = _parseExdate(todoLines);
+
+    return CalendarTodo(
+      uid: uid,
+      calendarId: calendarId,
+      href: href,
+      etag: etag,
+      summary: _unescapeIcalText(summary),
+      description: properties['DESCRIPTION'] != null
+          ? _unescapeIcalText(properties['DESCRIPTION']!)
+          : null,
+      location: properties['LOCATION'] != null
+          ? _unescapeIcalText(properties['LOCATION']!)
+          : null,
+      dtstart: dtstart,
+      due: due,
+      isAllDay: isAllDay,
+      status: status,
+      completed: completed,
+      percentComplete: percentComplete,
+      priority: priority,
+      rawIcalendar: icalendar,
+      isReadOnly: isReadOnly,
+      rrule: rrule,
+      recurrenceId: recurrenceId,
+      exdate: exdate,
+    );
+  }
+
+  /// Parse multiple VTODOs from an iCalendar string.
+  static List<CalendarTodo> parseTodos(
+    String icalendar, {
+    required String calendarId,
+    Uri? baseHref,
+    bool isReadOnly = false,
+  }) {
+    final lines = _unfoldLines(icalendar);
+    final todos = <CalendarTodo>[];
+
+    var inTodo = false;
+    var todoLines = <String>[];
+
+    for (final line in lines) {
+      if (line == 'BEGIN:VTODO') {
+        inTodo = true;
+        todoLines = [];
+      } else if (line == 'END:VTODO') {
+        inTodo = false;
+        final todo = parseTodo(
+          'BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VTODO\n${todoLines.join('\n')}\nEND:VTODO\nEND:VCALENDAR',
+          calendarId: calendarId,
+          isReadOnly: isReadOnly,
+        );
+        if (todo != null) todos.add(todo);
+      } else if (inTodo) {
+        todoLines.add(line);
+      }
+    }
+
+    return todos;
+  }
+
+  /// Map an iCalendar STATUS value to [TodoStatus].
+  static TodoStatus _parseTodoStatus(String? value) {
+    switch (value?.toUpperCase()) {
+      case 'COMPLETED':
+        return TodoStatus.completed;
+      case 'IN-PROCESS':
+        return TodoStatus.inProcess;
+      case 'CANCELLED':
+        return TodoStatus.cancelled;
+      case 'NEEDS-ACTION':
+      default:
+        return TodoStatus.needsAction;
+    }
   }
 
   /// Unfold continuation lines (RFC 5545 Section 3.1)

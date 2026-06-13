@@ -1,5 +1,6 @@
 import 'package:test/test.dart';
 import 'package:caldav/caldav.dart';
+import 'package:caldav/src/event/icalendar_parser.dart';
 
 void main() {
   group('CalendarTodo', () {
@@ -138,6 +139,133 @@ void main() {
         uid: 't', calendarId: 'c', summary: 's', priority: 0,
       );
       expect(todo.toIcalendar(), isNot(contains('PRIORITY:')));
+    });
+  });
+
+  group('ICalendarParser.parseTodo', () {
+    CalendarTodo? parse(String ical) =>
+        ICalendarParser.parseTodo(ical, calendarId: 'cal-1');
+
+    test('parses a full todo', () {
+      const ical = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:todo-full
+DTSTART:20260301T090000Z
+DUE:20260310T170000Z
+SUMMARY:Write report
+DESCRIPTION:Quarterly numbers
+LOCATION:Desk
+STATUS:IN-PROCESS
+PERCENT-COMPLETE:40
+PRIORITY:2
+END:VTODO
+END:VCALENDAR''';
+
+      final todo = parse(ical);
+      expect(todo, isNotNull);
+      expect(todo!.uid, equals('todo-full'));
+      expect(todo.summary, equals('Write report'));
+      expect(todo.description, equals('Quarterly numbers'));
+      expect(todo.location, equals('Desk'));
+      expect(todo.dtstart, equals(DateTime.utc(2026, 3, 1, 9)));
+      expect(todo.due, equals(DateTime.utc(2026, 3, 10, 17)));
+      expect(todo.status, equals(TodoStatus.inProcess));
+      expect(todo.percentComplete, equals(40));
+      expect(todo.priority, equals(2));
+      expect(todo.calendarId, equals('cal-1'));
+    });
+
+    test('parses todo with only DUE (no DTSTART)', () {
+      const ical = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:todo-due-only
+DUE:20260310T170000Z
+SUMMARY:Deadline only
+END:VTODO
+END:VCALENDAR''';
+      final todo = parse(ical);
+      expect(todo, isNotNull);
+      expect(todo!.dtstart, isNull);
+      expect(todo.due, equals(DateTime.utc(2026, 3, 10, 17)));
+    });
+
+    test('parses todo with neither DTSTART nor DUE', () {
+      const ical = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:todo-floating
+SUMMARY:Someday
+END:VTODO
+END:VCALENDAR''';
+      final todo = parse(ical);
+      expect(todo, isNotNull);
+      expect(todo!.dtstart, isNull);
+      expect(todo.due, isNull);
+      expect(todo.status, equals(TodoStatus.needsAction));
+    });
+
+    test('parses all-day DUE (VALUE=DATE)', () {
+      const ical = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:todo-allday
+DUE;VALUE=DATE:20260310
+SUMMARY:All day deadline
+END:VTODO
+END:VCALENDAR''';
+      final todo = parse(ical);
+      expect(todo, isNotNull);
+      expect(todo!.isAllDay, isTrue);
+      expect(todo.due, equals(DateTime.utc(2026, 3, 10)));
+    });
+
+    test('maps STATUS:COMPLETED and COMPLETED timestamp', () {
+      const ical = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:todo-done
+SUMMARY:Done
+STATUS:COMPLETED
+COMPLETED:20260102T083000Z
+END:VTODO
+END:VCALENDAR''';
+      final todo = parse(ical);
+      expect(todo, isNotNull);
+      expect(todo!.status, equals(TodoStatus.completed));
+      expect(todo.completed, equals(DateTime.utc(2026, 1, 2, 8, 30)));
+      expect(todo.isCompleted, isTrue);
+    });
+
+    test('returns null for missing UID', () {
+      const ical = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+SUMMARY:No uid
+END:VTODO
+END:VCALENDAR''';
+      expect(parse(ical), isNull);
+    });
+  });
+
+  group('ICalendarParser.parseTodos', () {
+    test('parses multiple todos', () {
+      const ical = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:t1
+SUMMARY:First
+END:VTODO
+BEGIN:VTODO
+UID:t2
+SUMMARY:Second
+END:VTODO
+END:VCALENDAR''';
+      final todos = ICalendarParser.parseTodos(ical, calendarId: 'cal-1');
+      expect(todos.length, equals(2));
+      expect(todos[0].uid, equals('t1'));
+      expect(todos[1].uid, equals('t2'));
     });
   });
 }
