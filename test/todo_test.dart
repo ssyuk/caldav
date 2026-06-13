@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 import 'package:caldav/caldav.dart';
 import 'package:caldav/src/event/icalendar_parser.dart';
+import 'package:caldav/src/event/todo_service.dart';
 
 void main() {
   group('CalendarTodo', () {
@@ -266,6 +267,25 @@ END:VCALENDAR''';
       expect(todos.length, equals(2));
       expect(todos[0].uid, equals('t1'));
       expect(todos[1].uid, equals('t2'));
+    });
+  });
+
+  group('TodoService query body', () {
+    test('calendar-query filters on VTODO', () {
+      final body = TodoService.buildCalendarQueryBody(start: null, end: null);
+      expect(body, contains('<C:comp-filter name="VCALENDAR">'));
+      expect(body, contains('<C:comp-filter name="VTODO">'));
+      expect(body, isNot(contains('VEVENT')));
+      expect(body, isNot(contains('<C:time-range')));
+    });
+
+    test('calendar-query includes time-range when start and end given', () {
+      final body = TodoService.buildCalendarQueryBody(
+        start: DateTime.utc(2026, 1, 1),
+        end: DateTime.utc(2026, 2, 1),
+      );
+      expect(body, contains('<C:comp-filter name="VTODO">'));
+      expect(body, contains('<C:time-range start="20260101T000000Z" end="20260201T000000Z"/>'));
     });
   });
 
