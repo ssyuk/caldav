@@ -32,12 +32,15 @@ abstract class CalendarComponent {
   final String? rawIcalendar;
 
   /// Recurrence rule (RFC 5545 RRULE)
+  /// Example: "FREQ=DAILY;INTERVAL=1;COUNT=10"
   final String? rrule;
 
   /// Recurrence ID for modified instances (RFC 5545 RECURRENCE-ID)
+  /// Contains the original occurrence date of a modified recurring instance
   final String? recurrenceId;
 
   /// Exception dates (RFC 5545 EXDATE)
+  /// List of dates excluded from the recurrence set
   final List<String>? exdate;
 
   const CalendarComponent({

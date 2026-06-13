@@ -24,7 +24,7 @@ class CalendarEvent extends CalendarComponent {
     super.location,
     this.isAllDay = false,
     super.rawIcalendar,
-    super.isReadOnly,
+    super.isReadOnly = false,
     super.rrule,
     super.recurrenceId,
     super.exdate,
