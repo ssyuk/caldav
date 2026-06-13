@@ -289,6 +289,44 @@ END:VCALENDAR''';
     });
   });
 
+  group('CalDavClient todo guards', () {
+    test('updateTodo throws ForbiddenException for read-only todo', () {
+      final client = CalDavClient(
+        baseUrl: 'https://example.com',
+        username: 'u',
+        password: 'p',
+      );
+      addTearDown(client.close);
+
+      const todo = CalendarTodo(
+        uid: 't', calendarId: 'c', summary: 's', isReadOnly: true,
+      );
+
+      expect(
+        () => client.updateTodo(todo),
+        throwsA(isA<ForbiddenException>()),
+      );
+    });
+
+    test('deleteTodo throws ForbiddenException for read-only todo', () {
+      final client = CalDavClient(
+        baseUrl: 'https://example.com',
+        username: 'u',
+        password: 'p',
+      );
+      addTearDown(client.close);
+
+      const todo = CalendarTodo(
+        uid: 't', calendarId: 'c', summary: 's', isReadOnly: true,
+      );
+
+      expect(
+        () => client.deleteTodo(todo),
+        throwsA(isA<ForbiddenException>()),
+      );
+    });
+  });
+
   group('CalendarTodo round-trip', () {
     test('timed todo survives parse → serialize → parse', () {
       const ical = '''BEGIN:VCALENDAR

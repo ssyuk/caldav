@@ -8,6 +8,8 @@ import 'discovery/discovery_result.dart';
 import 'discovery/discovery_service.dart';
 import 'event/event.dart';
 import 'event/event_service.dart';
+import 'event/todo.dart';
+import 'event/todo_service.dart';
 import 'exceptions/caldav_exception.dart';
 import 'webdav/propfind_builder.dart';
 
@@ -38,6 +40,7 @@ class CalDavClient {
   DiscoveryResult? _discoveryResult;
   CalendarService? _calendarService;
   EventService? _eventService;
+  TodoService? _todoService;
 
   CalDavClient._({
     required Dio dio,
@@ -252,6 +255,7 @@ class CalDavClient {
     _discoveryResult = null;
     _calendarService = null;
     _eventService = null;
+    _todoService = null;
   }
 
   // ============================================================
@@ -449,6 +453,80 @@ class CalDavClient {
   }
 
   // ============================================================
+  // Todos (VTODO)
+  // ============================================================
+
+  /// Get todos from a calendar.
+  ///
+  /// [start]/[end] apply a server-side time-range filter when both are given;
+  /// otherwise all todos are returned.
+  Future<List<CalendarTodo>> getTodos(
+    Calendar calendar, {
+    DateTime? start,
+    DateTime? end,
+  }) async {
+    await _ensureDiscovered();
+    return _todoService!.list(calendar, start: start, end: end);
+  }
+
+  /// Create a new todo.
+  ///
+  /// Returns the created todo with href and etag set.
+  /// Throws [ForbiddenException] if the calendar is read-only.
+  Future<CalendarTodo> createTodo(
+    Calendar calendar,
+    CalendarTodo todo,
+  ) async {
+    _ensureWritable(calendar);
+    await _ensureDiscovered();
+    return _todoService!.create(calendar, todo);
+  }
+
+  /// Update an existing todo.
+  ///
+  /// Uses ETag for optimistic locking if available.
+  /// Throws [ConflictException] if the todo was modified by another client.
+  /// Throws [ForbiddenException] if the todo is read-only.
+  Future<CalendarTodo> updateTodo(CalendarTodo todo) async {
+    if (todo.isReadOnly) {
+      throw const ForbiddenException('Cannot update a read-only todo');
+    }
+    await _ensureDiscovered();
+    return _todoService!.update(todo);
+  }
+
+  /// Delete a todo.
+  ///
+  /// Throws [ConflictException] if the todo was modified by another client.
+  /// Throws [ForbiddenException] if the todo is read-only.
+  Future<void> deleteTodo(CalendarTodo todo) async {
+    if (todo.isReadOnly) {
+      throw const ForbiddenException('Cannot delete a read-only todo');
+    }
+    await _ensureDiscovered();
+    return _todoService!.delete(todo);
+  }
+
+  /// Find a todo by UID across all calendars.
+  ///
+  /// Searches all calendars in parallel. Returns null if no todo is found.
+  Future<CalendarTodo?> getTodoByUid(String uid) async {
+    await _ensureDiscovered();
+    final calendars = await getCalendars();
+
+    final futures = calendars.map((calendar) async {
+      final todo = await _todoService!.findByUid(calendar, uid);
+      return todo?.copyWith(calendarId: calendar.uid);
+    });
+
+    final results = await Future.wait(futures);
+    return results.firstWhere(
+      (todo) => todo != null,
+      orElse: () => null,
+    );
+  }
+
+  // ============================================================
   // Lifecycle
   // ============================================================
 
@@ -483,5 +561,6 @@ class CalDavClient {
       _discoveryResult!.calendarHomeSet,
     );
     _eventService ??= EventService(_webdavClient);
+    _todoService ??= TodoService(_webdavClient);
   }
 }
