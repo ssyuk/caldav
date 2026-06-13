@@ -103,9 +103,82 @@ class CalendarTodo extends CalendarComponent {
 
   @override
   String toIcalendar() {
-    // Implemented in Task 3.
-    throw UnimplementedError();
+    final buffer = StringBuffer();
+    buffer.writeln('BEGIN:VCALENDAR');
+    buffer.writeln('VERSION:2.0');
+    buffer.writeln('PRODID:-//dart-caldav-client//EN');
+
+    buffer.writeln('BEGIN:VTODO');
+    buffer.writeln('UID:$uid');
+    buffer.writeln('DTSTAMP:${ICalendarUtils.formatUtc(DateTime.now().toUtc())}');
+
+    if (dtstart != null) {
+      if (isAllDay) {
+        buffer.writeln('DTSTART;VALUE=DATE:${ICalendarUtils.formatDate(dtstart!)}');
+      } else {
+        buffer.writeln('DTSTART:${ICalendarUtils.formatUtc(dtstart!.toUtc())}');
+      }
+    }
+
+    // DUE is the deadline instant, not an exclusive end — no +1 day shift.
+    if (due != null) {
+      if (isAllDay) {
+        buffer.writeln('DUE;VALUE=DATE:${ICalendarUtils.formatDate(due!)}');
+      } else {
+        buffer.writeln('DUE:${ICalendarUtils.formatUtc(due!.toUtc())}');
+      }
+    }
+
+    buffer.writeln('SUMMARY:${ICalendarUtils.escapeText(summary)}');
+
+    if (description != null && description!.isNotEmpty) {
+      buffer.writeln('DESCRIPTION:${ICalendarUtils.escapeText(description!)}');
+    }
+
+    if (location != null && location!.isNotEmpty) {
+      buffer.writeln('LOCATION:${ICalendarUtils.escapeText(location!)}');
+    }
+
+    if (status != TodoStatus.needsAction) {
+      buffer.writeln('STATUS:${_statusToIcal(status)}');
+    }
+
+    if (completed != null) {
+      buffer.writeln('COMPLETED:${ICalendarUtils.formatUtc(completed!.toUtc())}');
+    }
+
+    if (percentComplete != null) {
+      buffer.writeln('PERCENT-COMPLETE:$percentComplete');
+    }
+
+    if (priority != null && priority != 0) {
+      buffer.writeln('PRIORITY:$priority');
+    }
+
+    if (rrule != null && rrule!.isNotEmpty) {
+      buffer.writeln('RRULE:$rrule');
+    }
+
+    if (recurrenceId != null && recurrenceId!.isNotEmpty) {
+      buffer.writeln('RECURRENCE-ID:$recurrenceId');
+    }
+
+    if (exdate != null && exdate!.isNotEmpty) {
+      buffer.writeln('EXDATE:${exdate!.join(',')}');
+    }
+
+    buffer.writeln('END:VTODO');
+    buffer.writeln('END:VCALENDAR');
+
+    return buffer.toString();
   }
+
+  static String _statusToIcal(TodoStatus status) => switch (status) {
+        TodoStatus.needsAction => 'NEEDS-ACTION',
+        TodoStatus.inProcess => 'IN-PROCESS',
+        TodoStatus.completed => 'COMPLETED',
+        TodoStatus.cancelled => 'CANCELLED',
+      };
 
   @override
   String toString() =>
