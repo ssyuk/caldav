@@ -1,71 +1,33 @@
 import '../utils/icalendar_utils.dart';
+import 'calendar_component.dart';
 
 /// Represents a calendar event (VEVENT)
-class CalendarEvent {
-  /// Unique identifier for the event
-  final String uid;
-
-  /// Calendar ID that this event belongs to
-  final String calendarId;
-
-  /// Resource URL (set after creation)
-  final Uri? href;
-
-  /// Entity tag for concurrency control
-  final String? etag;
-
+class CalendarEvent extends CalendarComponent {
   /// Event start time (UTC)
   final DateTime start;
 
   /// Event end time (UTC)
   final DateTime? end;
 
-  /// Event title/summary
-  final String summary;
-
-  /// Event description
-  final String? description;
-
-  /// Event location
-  final String? location;
-
   /// Whether this is an all-day event
   final bool isAllDay;
 
-  /// Raw iCalendar data (preserved from server)
-  final String? rawIcalendar;
-
-  /// Whether this event is read-only (inherited from calendar)
-  final bool isReadOnly;
-
-  /// Recurrence rule (RFC 5545 RRULE)
-  /// Example: "FREQ=DAILY;INTERVAL=1;COUNT=10"
-  final String? rrule;
-
-  /// Recurrence ID for modified instances (RFC 5545 RECURRENCE-ID)
-  /// Contains the original occurrence date of a modified recurring instance
-  final String? recurrenceId;
-
-  /// Exception dates (RFC 5545 EXDATE)
-  /// List of dates excluded from the recurrence set
-  final List<String>? exdate;
-
   const CalendarEvent({
-    required this.uid,
-    required this.calendarId,
-    this.href,
-    this.etag,
+    required super.uid,
+    required super.calendarId,
+    super.href,
+    super.etag,
     required this.start,
     this.end,
-    required this.summary,
-    this.description,
-    this.location,
+    required super.summary,
+    super.description,
+    super.location,
     this.isAllDay = false,
-    this.rawIcalendar,
-    this.isReadOnly = false,
-    this.rrule,
-    this.recurrenceId,
-    this.exdate,
+    super.rawIcalendar,
+    super.isReadOnly,
+    super.rrule,
+    super.recurrenceId,
+    super.exdate,
   });
 
   /// Event duration
@@ -112,6 +74,7 @@ class CalendarEvent {
   }
 
   /// Convert to iCalendar format
+  @override
   String toIcalendar() {
     final buffer = StringBuffer();
     buffer.writeln('BEGIN:VCALENDAR');
